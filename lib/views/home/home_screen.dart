@@ -5,9 +5,9 @@ import '../../widgets/custom_search_bar.dart';
 import '../../widgets/movie_card.dart';
 import '../../widgets/movie_list_tile.dart';
 import '../../viewmodels/movie_viewmodel.dart';
-import '../../viewmodels/providers.dart';
+import '../../viewmodels/navigation_provider.dart';
 import '../detail/movie_detail_screen.dart';
-import '../profile/profile_screen.dart';
+import '../search/search_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,7 +16,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendingMovies = ref.watch(trendingMoviesProvider);
     final popularMovies = ref.watch(popularMoviesProvider);
-    final authState = ref.watch(authStateProvider);
+    final selectedCategory = ref.watch(mediaCategoryProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -62,7 +62,10 @@ class HomeScreen extends ConsumerWidget {
                   hintText: 'Film veya dizi ara...',
                   readOnly: true,
                   onTap: () {
-                    // TODO: Navigate to search screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchScreen()),
+                    );
                   },
                 ),
               ),
@@ -80,14 +83,22 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.movie_outlined,
                       label: 'Diziler',
                       subtitle: 'En yeni bölümler',
-                      onTap: () {},
+                      isActive: selectedCategory == MediaCategory.series,
+                      onTap: () {
+                        ref.read(mediaCategoryProvider.notifier).state =
+                            MediaCategory.series;
+                      },
                     ),
                     const SizedBox(width: 12),
                     _CategoryButton(
                       icon: Icons.live_tv,
                       label: 'Filmler',
                       subtitle: 'Vizyondakiler',
-                      onTap: () {},
+                      isActive: selectedCategory == MediaCategory.movies,
+                      onTap: () {
+                        ref.read(mediaCategoryProvider.notifier).state =
+                            MediaCategory.movies;
+                      },
                     ),
                   ],
                 ),
@@ -104,7 +115,9 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Trend Diziler',
+                      selectedCategory == MediaCategory.series
+                          ? 'Trend Diziler'
+                          : 'Trend Filmler',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
@@ -279,58 +292,6 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-
-      // Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavBarItem(
-                  icon: Icons.home,
-                  label: 'Ana Sayfa',
-                  isActive: true,
-                  onTap: () {},
-                ),
-                _NavBarItem(
-                  icon: Icons.forum,
-                  label: 'Tartışmalar',
-                  isActive: false,
-                  onTap: () {},
-                ),
-                _NavBarItem(
-                  icon: Icons.person,
-                  label: 'Profil',
-                  isActive: false,
-                  onTap: () {
-                    final userId = authState.value?.uid;
-                    if (userId != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProfileScreen(userId: userId),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -339,12 +300,14 @@ class _CategoryButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final String subtitle;
+  final bool isActive;
   final VoidCallback onTap;
 
   const _CategoryButton({
     required this.icon,
     required this.label,
     required this.subtitle,
+    required this.isActive,
     required this.onTap,
   });
 
@@ -357,8 +320,13 @@ class _CategoryButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.cardBackground,
+            color: isActive
+                ? AppTheme.primary.withOpacity(0.15)
+                : AppTheme.cardBackground,
             borderRadius: BorderRadius.circular(12),
+            border: isActive
+                ? Border.all(color: AppTheme.primary, width: 2)
+                : null,
           ),
           child: Row(
             children: [
@@ -395,50 +363,6 @@ class _CategoryButton extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? AppTheme.primary : AppTheme.textHint,
-              size: 26,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? AppTheme.primary : AppTheme.textHint,
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
         ),
       ),
     );

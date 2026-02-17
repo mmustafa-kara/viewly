@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/models/movie_model.dart';
 import '../../core/theme.dart';
+import '../../viewmodels/providers.dart';
+import '../discussion/movie_discussions_screen.dart';
 
-class MovieDetailScreen extends StatelessWidget {
+class MovieDetailScreen extends ConsumerWidget {
   final MovieModel movie;
 
   const MovieDetailScreen({super.key, required this.movie});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -175,7 +180,7 @@ class MovieDetailScreen extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: Navigate to discussion screen
+                        _showCreatePostModal(context, ref, authState);
                       },
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text('Tartışma Başlat'),
@@ -189,7 +194,13 @@ class MovieDetailScreen extends StatelessWidget {
                     height: 56,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        // TODO: Navigate to discussions list
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                MovieDiscussionsScreen(movie: movie),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.forum_outlined),
                       label: const Text('Tartışmaları Gör'),
@@ -202,6 +213,159 @@ class MovieDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCreatePostModal(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue authState,
+  ) {
+    final user = authState.value;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tartışma başlatmak için giriş yapmalısınız'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    final textController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (modalContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(modalContext).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Yeni Tartışma',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(modalContext),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Movie Title
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.movie, size: 20, color: AppTheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        movie.title,
+                        style: const TextStyle(
+                          color: AppTheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Text Field
+              TextField(
+                controller: textController,
+                maxLines: 5,
+                autofocus: true,
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'Düşüncelerini paylaş...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final content = textController.text.trim();
+
+                    if (content.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Lütfen bir yorum yazın'),
+                          backgroundColor: AppTheme.error,
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      final firestoreService = ref.read(
+                        firestoreServiceProvider,
+                      );
+
+                      await firestoreService.createPost(
+                        userId: user.uid,
+                        movieId: movie.id.toString(),
+                        movieTitle: movie.title,
+                        content: content,
+                      );
+
+                      Navigator.pop(modalContext);
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Tartışma başarıyla paylaşıldı! 🎉'),
+                            backgroundColor: AppTheme.primary,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Hata: $e'),
+                            backgroundColor: AppTheme.error,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Paylaş'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
