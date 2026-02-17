@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "982128945866",
+    "project_id": "movietalk-a9051",
+    "storage_bucket": "movietalk-a9051.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:982128945866:android:67e66d6a365e83b5f66233",
+        "android_client_info": {
+          "package_name": "com.example.forum_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTSUxuwx5w9PQgZQ2xV8b8Yn3RlvOfc6I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
