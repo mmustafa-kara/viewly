@@ -64,6 +64,38 @@ class TMDbService {
     }
   }
 
+  /// Discover movies/tv by genre
+  Future<List<MovieModel>> discoverByGenre({
+    required String mediaType, // 'movie' or 'tv'
+    int? genreId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'api_key': Config.tmdbApiKey,
+        'language': 'tr-TR',
+        'sort_by': 'popularity.desc',
+      };
+
+      if (genreId != null) {
+        queryParams['with_genres'] = genreId.toString();
+      }
+
+      final response = await _dio.get(
+        '/discover/$mediaType',
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = response.data['results'];
+        return results.map((json) => MovieModel.fromJson(json)).toList();
+      } else {
+        throw Exception('Katalog yüklenemedi');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   /// Get movie details
   Future<MovieModel> getMovieDetails(int movieId) async {
     try {

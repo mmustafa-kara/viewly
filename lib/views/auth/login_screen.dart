@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
 import '../../data/models/user_model.dart';
-import '../home/home_screen.dart';
+import '../main_wrapper.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -43,8 +43,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (user != null && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        // Use pushAndRemoveUntil to clear navigation stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainWrapper()),
+          (route) => false,
         );
       }
     } catch (e) {
@@ -82,8 +84,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
         await firestoreService.saveUser(userModel);
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        // Use pushAndRemoveUntil to clear navigation stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainWrapper()),
+          (route) => false,
         );
       }
     } catch (e) {

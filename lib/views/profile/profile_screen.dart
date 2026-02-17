@@ -6,15 +6,22 @@ import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
 import '../auth/login_screen.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
   const ProfileScreen({super.key, required this.userId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userProfile = ref.watch(userProfileProvider(userId));
-    final userPosts = ref.watch(userPostsProvider(userId));
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  int _selectedTabIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final userProfile = ref.watch(userProfileProvider(widget.userId));
+    final userPosts = ref.watch(userPostsProvider(widget.userId));
 
     return Scaffold(
       appBar: AppBar(
@@ -188,23 +195,52 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Tabs
-                DefaultTabController(
-                  length: 3,
-                  child: Column(
-                    children: [
-                      const TabBar(
-                        indicatorColor: AppTheme.primary,
-                        labelColor: AppTheme.primary,
-                        unselectedLabelColor: AppTheme.textHint,
-                        tabs: [
-                          Tab(text: 'Geçmiş\nTartışmalarım'),
-                          Tab(text: 'Kaydedilenler'),
-                          Tab(text: 'Beğenilenler'),
+                Column(
+                  children: [
+                    // Tab Headers
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          _TabButton(
+                            label: 'Geçmiş\nTartışmalarım',
+                            isActive: _selectedTabIndex == 0,
+                            onTap: () {
+                              setState(() {
+                                _selectedTabIndex = 0;
+                              });
+                            },
+                          ),
+                          _TabButton(
+                            label: 'Kaydedilenler',
+                            isActive: _selectedTabIndex == 1,
+                            onTap: () {
+                              setState(() {
+                                _selectedTabIndex = 1;
+                              });
+                            },
+                          ),
+                          _TabButton(
+                            label: 'Beğenilenler',
+                            isActive: _selectedTabIndex == 2,
+                            onTap: () {
+                              setState(() {
+                                _selectedTabIndex = 2;
+                              });
+                            },
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                    ),
+                    const SizedBox(height: 16),
 
-                      // Posts List
+                    // Tab Content
+                    if (_selectedTabIndex == 0)
+                      // Tab 1: User Posts
                       userPosts.when(
                         data: (snapshot) {
                           final posts = snapshot.docs;
@@ -343,9 +379,46 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                      )
+                    else if (_selectedTabIndex == 1)
+                      // Tab 2: Saved Posts (Placeholder)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.bookmark_border,
+                              size: 64,
+                              color: AppTheme.textHint,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Henüz kaydedilmedi',
+                              style: TextStyle(color: AppTheme.textHint),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Tab 3: Liked Posts (Placeholder)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.favorite_border,
+                              size: 64,
+                              color: AppTheme.textHint,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Henüz beğenilmedi',
+                              style: TextStyle(color: AppTheme.textHint),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -381,6 +454,44 @@ class ProfileScreen extends ConsumerWidget {
       return '${(number / 1000).toStringAsFixed(1)}K';
     }
     return number.toString();
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isActive ? AppTheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isActive ? Colors.white : AppTheme.textHint,
+              fontSize: 12,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

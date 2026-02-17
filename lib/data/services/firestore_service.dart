@@ -95,6 +95,14 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Get top-rated posts (sorted by likes)
+  Stream<QuerySnapshot> getTopRatedPosts() {
+    return _postsCollection
+        .orderBy('likes', descending: true)
+        .limit(50)
+        .snapshots();
+  }
+
   /// Like a post
   Future<void> likePost(String postId) async {
     try {

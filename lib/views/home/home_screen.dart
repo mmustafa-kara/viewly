@@ -5,9 +5,16 @@ import '../../widgets/custom_search_bar.dart';
 import '../../widgets/movie_card.dart';
 import '../../widgets/movie_list_tile.dart';
 import '../../viewmodels/movie_viewmodel.dart';
-import '../../viewmodels/navigation_provider.dart';
+import '../../viewmodels/providers.dart';
 import '../detail/movie_detail_screen.dart';
 import '../search/search_screen.dart';
+import '../catalog/catalog_screen.dart';
+
+// Provider for trending TV shows
+final trendingTVProvider = FutureProvider.autoDispose((ref) async {
+  final tmdbService = ref.watch(tmdbServiceProvider);
+  return await tmdbService.discoverByGenre(mediaType: 'tv', genreId: null);
+});
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -15,8 +22,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendingMovies = ref.watch(trendingMoviesProvider);
-    final popularMovies = ref.watch(popularMoviesProvider);
-    final selectedCategory = ref.watch(mediaCategoryProvider);
+    final trendingTV = ref.watch(trendingTVProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -71,43 +77,9 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-            // Categories (Diziler / Filmler buttons)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _CategoryButton(
-                      icon: Icons.movie_outlined,
-                      label: 'Diziler',
-                      subtitle: 'En yeni bölümler',
-                      isActive: selectedCategory == MediaCategory.series,
-                      onTap: () {
-                        ref.read(mediaCategoryProvider.notifier).state =
-                            MediaCategory.series;
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    _CategoryButton(
-                      icon: Icons.live_tv,
-                      label: 'Filmler',
-                      subtitle: 'Vizyondakiler',
-                      isActive: selectedCategory == MediaCategory.movies,
-                      onTap: () {
-                        ref.read(mediaCategoryProvider.notifier).state =
-                            MediaCategory.movies;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-            // Trending Section Header
+            // Section 1: Trend Filmler (Horizontal)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -115,13 +87,19 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      selectedCategory == MediaCategory.series
-                          ? 'Trend Diziler'
-                          : 'Trend Filmler',
+                      'Trend Filmler',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const CatalogScreen(mediaType: MediaType.movie),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Tümünü Gör',
                         style: TextStyle(color: AppTheme.secondary),
@@ -195,7 +173,7 @@ class HomeScreen extends ConsumerWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
-            // Popular Section Header
+            // Section 2: Trend Diziler (Vertical)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -203,11 +181,19 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Trend Filmler',
+                      'Trend Diziler',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const CatalogScreen(mediaType: MediaType.tv),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Tümünü Gör',
                         style: TextStyle(color: AppTheme.secondary),
@@ -220,16 +206,16 @@ class HomeScreen extends ConsumerWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Popular Movies Vertical List
-            popularMovies.when(
-              data: (movies) {
-                if (movies.isEmpty) {
+            // Trending TV Shows Vertical List
+            trendingTV.when(
+              data: (tvShows) {
+                if (tvShows.isEmpty) {
                   return const SliverToBoxAdapter(
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                          'Henüz film yok',
+                          'Henüz dizi yok',
                           style: TextStyle(color: AppTheme.textHint),
                         ),
                       ),
@@ -241,18 +227,18 @@ class HomeScreen extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       return MovieListTile(
-                        movie: movies[index],
+                        movie: tvShows[index],
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) =>
-                                  MovieDetailScreen(movie: movies[index]),
+                                  MovieDetailScreen(movie: tvShows[index]),
                             ),
                           );
                         },
                       );
-                    }, childCount: movies.length > 10 ? 10 : movies.length),
+                    }, childCount: tvShows.length > 10 ? 10 : tvShows.length),
                   ),
                 );
               },
@@ -290,79 +276,6 @@ class HomeScreen extends ConsumerWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const _CategoryButton({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isActive
-                ? AppTheme.primary.withOpacity(0.15)
-                : AppTheme.cardBackground,
-            borderRadius: BorderRadius.circular(12),
-            border: isActive
-                ? Border.all(color: AppTheme.primary, width: 2)
-                : null,
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: AppTheme.primary, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: AppTheme.textHint,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme.dart';
-import '../viewmodels/navigation_provider.dart';
-import '../viewmodels/providers.dart';
+import '../../core/theme.dart';
+import '../../viewmodels/providers.dart';
+import '../../viewmodels/navigation_provider.dart';
 import 'home/home_screen.dart';
+import 'discussion/global_discussions_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainWrapper extends ConsumerWidget {
@@ -14,17 +15,30 @@ class MainWrapper extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final authState = ref.watch(authStateProvider);
 
-    // Screens
-    final screens = [
-      const HomeScreen(),
-      const _DiscussionsPlaceholder(),
-      authState.value?.uid != null
-          ? ProfileScreen(userId: authState.value!.uid)
-          : const _ProfilePlaceholder(),
-    ];
+    // Define screens - handle authState loading properly
+    Widget currentScreen = const HomeScreen();
+
+    if (currentIndex == 1) {
+      // Discussions tab
+      currentScreen = const GlobalDiscussionsScreen();
+    } else if (currentIndex == 2) {
+      // Profile tab - handle auth state
+      currentScreen = authState.when(
+        data: (user) {
+          if (user != null) {
+            return ProfileScreen(userId: user.uid);
+          }
+          return const _ProfilePlaceholder();
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.primary),
+        ),
+        error: (_, __) => const _ProfilePlaceholder(),
+      );
+    }
 
     return Scaffold(
-      body: IndexedStack(index: currentIndex, children: screens),
+      body: currentScreen,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
@@ -119,35 +133,6 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-class _DiscussionsPlaceholder extends StatelessWidget {
-  const _DiscussionsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.forum, size: 80, color: AppTheme.primary),
-            SizedBox(height: 16),
-            Text(
-              'Tartışmalar',
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text('Yakında...', style: TextStyle(color: AppTheme.textHint)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ProfilePlaceholder extends StatelessWidget {
   const _ProfilePlaceholder();
 
@@ -158,11 +143,11 @@ class _ProfilePlaceholder extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person, size: 80, color: AppTheme.textHint),
+            Icon(Icons.person_outline, size: 80, color: AppTheme.textHint),
             SizedBox(height: 16),
             Text(
-              'Lütfen giriş yapın',
-              style: TextStyle(color: AppTheme.textHint),
+              'Giriş yapmalısınız',
+              style: TextStyle(color: AppTheme.textHint, fontSize: 16),
             ),
           ],
         ),
