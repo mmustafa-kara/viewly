@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../models/movie_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -112,6 +113,62 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Beğeni eklenemedi: $e');
     }
+  }
+
+  // ========== FAVORITES SYSTEM (NO orderBy) ==========
+
+  /// Toggle favorite status for a movie
+  Future<void> toggleFavoriteMovie(String userId, MovieModel movie) async {
+    final docRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .doc(movie.id.toString());
+
+    final doc = await docRef.get();
+
+    if (doc.exists) {
+      await docRef.delete();
+    } else {
+      await docRef.set({
+        'movieId': movie.id,
+        'title': movie.title,
+        'posterPath': movie.posterPath,
+        'voteAverage': movie.voteAverage,
+      });
+    }
+  }
+
+  /// Check if a movie is in user's favorites
+  Future<bool> isMovieFavorite(String userId, String movieId) async {
+    final doc = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .doc(movieId)
+        .get();
+    return doc.exists;
+  }
+
+  /// Get stream of user's favorite movies (NO orderBy)
+  Stream<List<MovieModel>> getFavoriteMovies(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return MovieModel(
+              id: data['movieId'] as int,
+              title: data['title'] as String,
+              overview: '',
+              posterPath: data['posterPath'] as String? ?? '',
+              voteAverage: (data['voteAverage'] as num?)?.toDouble() ?? 0.0,
+            );
+          }).toList();
+        });
   }
 
   /// Delete a post

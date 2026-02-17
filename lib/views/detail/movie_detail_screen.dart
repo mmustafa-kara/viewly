@@ -145,14 +145,6 @@ class MovieDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-
-                      // Share Button
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.bookmark_border),
-                        color: AppTheme.textPrimary,
-                        iconSize: 28,
-                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -212,6 +204,51 @@ class MovieDetailScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+      floatingActionButton: Consumer(
+        builder: (context, ref, _) {
+          final authState = ref.watch(authStateProvider);
+          final userId = authState.value?.uid;
+
+          if (userId == null) return const SizedBox();
+
+          final firestoreService = ref.watch(firestoreServiceProvider);
+
+          return FutureBuilder<bool>(
+            future: firestoreService.isMovieFavorite(
+              userId,
+              movie.id.toString(),
+            ),
+            builder: (context, snapshot) {
+              final isSaved = snapshot.data ?? false;
+
+              return FloatingActionButton(
+                onPressed: () async {
+                  await firestoreService.toggleFavoriteMovie(userId, movie);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isSaved
+                              ? 'Favorilerden çıkarıldı'
+                              : 'Favorilere eklendi',
+                        ),
+                        backgroundColor: AppTheme.primary,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                backgroundColor: AppTheme.primary,
+                child: Icon(
+                  isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  color: Colors.white,
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

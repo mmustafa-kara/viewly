@@ -6,6 +6,7 @@ import '../../viewmodels/navigation_provider.dart';
 import 'home/home_screen.dart';
 import 'discussion/global_discussions_screen.dart';
 import 'profile/profile_screen.dart';
+import 'auth/login_screen.dart';
 
 class MainWrapper extends ConsumerWidget {
   const MainWrapper({super.key});
@@ -138,16 +139,37 @@ class _ProfilePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_outline, size: 80, color: AppTheme.textHint),
-            SizedBox(height: 16),
-            Text(
+            const Icon(
+              Icons.person_outline,
+              size: 80,
+              color: AppTheme.textHint,
+            ),
+            const SizedBox(height: 16),
+            const Text(
               'Giriş yapmalısınız',
               style: TextStyle(color: AppTheme.textHint, fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              icon: const Icon(Icons.login),
+              label: const Text('Giriş Yap'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
             ),
           ],
         ),

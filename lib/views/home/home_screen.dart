@@ -32,28 +32,17 @@ class HomeScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Keşfet',
-                            style: Theme.of(context).textTheme.displayMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Binlerce film ve tartışma seni bekliyor',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
+                    Text(
+                      'Keşfet',
+                      style: Theme.of(context).textTheme.displayMedium,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_outlined),
-                      onPressed: () {},
-                      color: AppTheme.textPrimary,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Binlerce film ve tartışma seni bekliyor',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),

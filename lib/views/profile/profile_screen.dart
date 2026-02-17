@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme.dart';
+import '../../data/models/movie_model.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
+import '../../widgets/movie_card.dart';
 import '../auth/login_screen.dart';
+import '../detail/movie_detail_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -26,6 +29,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
+        leading: IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Çıkış Yap',
+          onPressed: () async {
+            final authService = ref.read(authServiceProvider);
+            await authService.signOut();
+            if (context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            }
+          },
+        ),
         actions: [
           PopupMenuButton(
             icon: const Icon(Icons.more_vert),
@@ -49,25 +66,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
                 onTap: () {},
-              ),
-              PopupMenuItem(
-                child: const Row(
-                  children: [
-                    Icon(Icons.logout, size: 20, color: AppTheme.error),
-                    SizedBox(width: 12),
-                    Text('Çıkış Yap', style: TextStyle(color: AppTheme.error)),
-                  ],
-                ),
-                onTap: () async {
-                  final authService = ref.read(authServiceProvider);
-                  await authService.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                },
               ),
             ],
           ),
@@ -180,7 +178,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Edit Profile Button
+                // Share Profile Button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
@@ -188,12 +186,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () {},
-                      child: const Text('Profili Düzenle'),
+                      child: const Text('Profili Paylaş'),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-
                 // Tabs
                 Column(
                   children: [
@@ -381,23 +377,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       )
                     else if (_selectedTabIndex == 1)
-                      // Tab 2: Saved Posts (Placeholder)
-                      const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.bookmark_border,
-                              size: 64,
-                              color: AppTheme.textHint,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Henüz kaydedilmedi',
-                              style: TextStyle(color: AppTheme.textHint),
-                            ),
-                          ],
-                        ),
+                      // Tab 2: Saved Movies
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final firestoreService = ref.watch(
+                            firestoreServiceProvider,
+                          );
+                          final favoritesStream = firestoreService
+                              .getFavoriteMovies(widget.userId);
+
+                          return StreamBuilder<List<MovieModel>>(
+                            stream: favoritesStream,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(32),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppTheme.primary,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final movies = snapshot.data ?? [];
+
+                              if (movies.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(32),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.bookmark_border,
+                                        size: 64,
+                                        color: AppTheme.textHint,
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'Henüz kaydedilen film yok',
+                                        style: TextStyle(
+                                          color: AppTheme.textHint,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      childAspectRatio: 0.65,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                    ),
+                                itemCount: movies.length,
+                                itemBuilder: (context, index) {
+                                  return MovieCard(
+                                    movie: movies[index],
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => MovieDetailScreen(
+                                            movie: movies[index],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
                       )
                     else
                       // Tab 3: Liked Posts (Placeholder)
