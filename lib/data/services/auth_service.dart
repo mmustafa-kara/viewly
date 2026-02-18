@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Get current user
   User? get currentUser => _auth.currentUser;
@@ -9,7 +11,41 @@ class AuthService {
   /// Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Sign in with email and password
+  /// Sign in with identifier (email or username) and password.
+  /// If identifier contains '@', treat as email; otherwise look up username in Firestore.
+  Future<User?> signInWithIdentifier(String identifier, String password) async {
+    try {
+      String email;
+
+      if (identifier.contains('@')) {
+        // Identifier is an email
+        email = identifier;
+      } else {
+        // Identifier is a username — look up email from Firestore
+        final query = await _firestore
+            .collection('users')
+            .where('username', isEqualTo: identifier.toLowerCase())
+            .limit(1)
+            .get();
+
+        if (query.docs.isEmpty) {
+          throw 'Kullanıcı bulunamadı.';
+        }
+
+        email = query.docs.first.data()['email'] as String;
+      }
+
+      final UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return result.user;
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Legacy email/password sign-in (kept for compatibility)
   Future<User?> signInWithEmailPassword(String email, String password) async {
     try {
       final UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -22,7 +58,59 @@ class AuthService {
     }
   }
 
-  /// Sign up with email and password
+  /// Sign up with username, email, and password.
+  /// Checks Firestore to ensure username is unique, creates the Auth user,
+  /// and saves the user document to Firestore atomically.
+  Future<User?> signUpWithUsernameEmailPassword({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Normalize username to lowercase
+      final normalizedUsername = username.toLowerCase();
+
+      // Check if username is already taken
+      final usernameQuery = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: normalizedUsername)
+          .limit(1)
+          .get();
+
+      if (usernameQuery.docs.isNotEmpty) {
+        throw 'Bu kullanıcı adı zaten alınmış.';
+      }
+
+      // Create Firebase Auth user
+      final UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // CRITICAL: Save user document to Firestore BEFORE returning,
+      // so it completes before AuthGate redirects away from SignUpScreen.
+      if (result.user != null) {
+        await _firestore.collection('users').doc(result.user!.uid).set({
+          'email': email,
+          'username': normalizedUsername,
+          'displayName': null,
+          'photoUrl': null,
+          'bio': null,
+          'location': null,
+          'followersCount': 0,
+          'followingCount': 0,
+          'postsCount': 0,
+          'createdAt': DateTime.now().millisecondsSinceEpoch,
+        });
+      }
+
+      return result.user;
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Legacy sign-up (kept for compatibility)
   Future<User?> signUpWithEmailPassword(String email, String password) async {
     try {
       final UserCredential result = await _auth.createUserWithEmailAndPassword(

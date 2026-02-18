@@ -1,6 +1,7 @@
 class UserModel {
   final String uid;
   final String email;
+  final String? username;
   final String? displayName;
   final String? photoUrl;
   final String? bio;
@@ -13,6 +14,7 @@ class UserModel {
   UserModel({
     required this.uid,
     required this.email,
+    this.username,
     this.displayName,
     this.photoUrl,
     this.bio,
@@ -23,11 +25,20 @@ class UserModel {
     required this.createdAt,
   });
 
+  /// Fallback getter for legacy users who don't have a username yet.
+  String get displayUsername {
+    if (username != null && username!.isNotEmpty) {
+      return username!;
+    }
+    return email.split('@').first;
+  }
+
   /// Parse from Firestore document
   factory UserModel.fromFirestore(Map<String, dynamic> data, String uid) {
     return UserModel(
       uid: uid,
       email: data['email'] ?? '',
+      username: data['username'],
       displayName: data['displayName'],
       photoUrl: data['photoUrl'],
       bio: data['bio'],
@@ -45,6 +56,7 @@ class UserModel {
   Map<String, dynamic> toFirestore() {
     return {
       'email': email,
+      'username': username,
       'displayName': displayName,
       'photoUrl': photoUrl,
       'bio': bio,
@@ -60,6 +72,7 @@ class UserModel {
   UserModel copyWith({
     String? uid,
     String? email,
+    String? username,
     String? displayName,
     String? photoUrl,
     String? bio,
@@ -72,6 +85,7 @@ class UserModel {
     return UserModel(
       uid: uid ?? this.uid,
       email: email ?? this.email,
+      username: username ?? this.username,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       bio: bio ?? this.bio,

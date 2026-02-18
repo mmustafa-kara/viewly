@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme.dart';
-import '../../viewmodels/providers.dart';
 import '../../viewmodels/navigation_provider.dart';
 import 'home/home_screen.dart';
 import 'discussion/global_discussions_screen.dart';
 import 'profile/profile_screen.dart';
-import 'auth/login_screen.dart';
 
 class MainWrapper extends ConsumerWidget {
   const MainWrapper({super.key});
@@ -14,32 +13,19 @@ class MainWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
-    final authState = ref.watch(authStateProvider);
 
-    // Define screens - handle authState loading properly
-    Widget currentScreen = const HomeScreen();
+    // MainWrapper is only reachable when authenticated, so currentUser is guaranteed non-null.
+    final user = FirebaseAuth.instance.currentUser!;
 
-    if (currentIndex == 1) {
-      // Discussions tab
-      currentScreen = const GlobalDiscussionsScreen();
-    } else if (currentIndex == 2) {
-      // Profile tab - handle auth state
-      currentScreen = authState.when(
-        data: (user) {
-          if (user != null) {
-            return ProfileScreen(userId: user.uid);
-          }
-          return const _ProfilePlaceholder();
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.primary),
-        ),
-        error: (_, __) => const _ProfilePlaceholder(),
-      );
-    }
+    // Define screens
+    final List<Widget> screens = [
+      const HomeScreen(),
+      const GlobalDiscussionsScreen(),
+      ProfileScreen(userId: user.uid),
+    ];
 
     return Scaffold(
-      body: currentScreen,
+      body: screens[currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
@@ -125,50 +111,6 @@ class _NavBarItem extends StatelessWidget {
                 color: isActive ? AppTheme.primary : AppTheme.textHint,
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfilePlaceholder extends StatelessWidget {
-  const _ProfilePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.person_outline,
-              size: 80,
-              color: AppTheme.textHint,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Giriş yapmalısınız',
-              style: TextStyle(color: AppTheme.textHint, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              icon: const Icon(Icons.login),
-              label: const Text('Giriş Yap'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
               ),
             ),
           ],

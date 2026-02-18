@@ -6,7 +6,6 @@ import '../../data/models/movie_model.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
 import '../../widgets/movie_card.dart';
-import '../auth/login_screen.dart';
 import '../detail/movie_detail_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -35,12 +34,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onPressed: () async {
             final authService = ref.read(authServiceProvider);
             await authService.signOut();
-            if (context.mounted) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            }
+            // Auth state change will automatically trigger AuthGate to show LoginScreen
           },
         ),
         actions: [
@@ -102,7 +96,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 // Username
                 Text(
-                  user.displayName ?? '@${user.email.split('@')[0]}',
+                  '@${user.displayUsername}',
                   style: Theme.of(context).textTheme.displaySmall,
                 ),
                 const SizedBox(height: 8),

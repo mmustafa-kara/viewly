@@ -1,0 +1,6 @@
+﻿Analyzing profile_screen.dart...
+
+   info - profile_screen.dart:155:50 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - profile_screen.dart:164:50 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+2 issues found.

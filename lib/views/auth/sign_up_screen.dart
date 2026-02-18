@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
-import 'sign_up_screen.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends ConsumerStatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _identifierController = TextEditingController();
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
@@ -21,12 +21,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _identifierController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -36,15 +37,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signInWithIdentifier(
-        _identifierController.text.trim(),
-        _passwordController.text,
+      await authService.signUpWithUsernameEmailPassword(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
-      // Auth state change will automatically trigger AuthGate to show MainWrapper
+      // Auth state change will automatically trigger AuthGate to show MainWrapper.
+      // Firestore user document is already saved inside AuthService.
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
           _isLoading = false;
         });
       }
@@ -54,6 +62,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Kayıt Ol'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -72,7 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Icon(
-                      Icons.movie_outlined,
+                      Icons.person_add_outlined,
                       size: 48,
                       color: Colors.white,
                     ),
@@ -81,36 +96,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   // Title
                   Text(
-                    'CineTalk',
+                    'Hesap Oluştur',
                     style: Theme.of(context).textTheme.displayLarge,
                   ),
                   const SizedBox(height: 8),
 
                   // Subtitle
                   Text(
-                    'Sinema tutkunlarının buluşma noktası',
+                    'CineTalk topluluğuna katıl',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: AppTheme.secondary),
                   ),
                   const SizedBox(height: 48),
 
-                  // Identifier Input (Email or Username)
+                  // Username Input
                   TextFormField(
-                    controller: _identifierController,
+                    controller: _usernameController,
                     keyboardType: TextInputType.text,
                     style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
-                      labelText: 'E-posta veya Kullanıcı Adı',
-                      hintText: 'kullanici@cine.talk veya kullanici_adi',
+                      labelText: 'Kullanıcı Adı',
+                      hintText: 'kullanici_adi',
                       prefixIcon: Icon(
-                        Icons.person_outline,
+                        Icons.alternate_email,
                         color: AppTheme.textHint,
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'E-posta veya kullanıcı adı gerekli';
+                        return 'Kullanıcı adı gerekli';
+                      }
+                      if (value.length < 3) {
+                        return 'Kullanıcı adı en az 3 karakter olmalı';
+                      }
+                      if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+                        return 'Sadece harf, rakam ve alt çizgi kullanılabilir';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Email Input
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'E-posta',
+                      hintText: 'kullanici@cine.talk',
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: AppTheme.textHint,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'E-posta gerekli';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Geçerli bir e-posta girin';
                       }
                       return null;
                     },
@@ -153,23 +199,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
-
-                  // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        // TODO: Implement forgot password
-                      },
-                      child: Text(
-                        'Şifremi Unuttum',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.secondary,
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
                   // Error Message
@@ -203,12 +232,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
 
-                  // Login Button
+                  // Sign Up Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: _isLoading ? null : _handleSignUp,
                       child: _isLoading
                           ? const SizedBox(
                               width: 24,
@@ -221,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text('Giriş Yap'),
+                                Text('Kayıt Ol'),
                                 SizedBox(width: 8),
                                 Icon(Icons.arrow_forward, size: 20),
                               ],
@@ -230,117 +259,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Divider
-                  const Row(
-                    children: [
-                      Expanded(child: Divider(color: AppTheme.textHint)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'VEYA ŞUNUNLA DEVAM ET',
-                          style: TextStyle(
-                            color: AppTheme.textHint,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: AppTheme.textHint)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Social Login Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _SocialButton(
-                        icon: Icons.g_mobiledata,
-                        onTap: () {
-                          // TODO: Google Sign In
-                        },
-                      ),
-                      const SizedBox(width: 16),
-                      _SocialButton(
-                        icon: Icons.apple,
-                        onTap: () {
-                          // TODO: Apple Sign In
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Navigate to Sign Up
+                  // Navigate to Login
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'Hesabın yok mu?',
+                        'Zaten hesabın var mı?',
                         style: TextStyle(
                           color: AppTheme.textHint,
                           fontSize: 14,
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SignUpScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () => Navigator.pop(context),
                         child: const Text(
-                          'Kayıt Ol',
+                          'Giriş Yap',
                           style: TextStyle(
                             color: AppTheme.primary,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Footer Links
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'Kullanım Koşulları',
-                          style: TextStyle(
-                            color: AppTheme.textHint,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      const Text(
-                        '•',
-                        style: TextStyle(color: AppTheme.textHint),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'Gizlilik Politikası',
-                          style: TextStyle(
-                            color: AppTheme.textHint,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      const Text(
-                        '•',
-                        style: TextStyle(color: AppTheme.textHint),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'Yardım',
-                          style: TextStyle(
-                            color: AppTheme.textHint,
-                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -351,31 +288,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SocialButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.textHint.withValues(alpha: 0.2)),
-        ),
-        child: Icon(icon, size: 32, color: AppTheme.textPrimary),
       ),
     );
   }
