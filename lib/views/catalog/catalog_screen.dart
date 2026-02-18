@@ -81,7 +81,7 @@ class CatalogScreen extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(width: 8),
-                  ...genres.map(
+                  ..._getGenres(mediaType).map(
                     (genre) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: _GenreChip(
@@ -105,19 +105,21 @@ class CatalogScreen extends ConsumerWidget {
             child: catalogMovies.when(
               data: (movies) {
                 if (movies.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.movie_filter_outlined,
                           size: 80,
                           color: AppTheme.textHint,
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
-                          'Film bulunamadı',
-                          style: TextStyle(
+                          mediaType == MediaType.movie
+                              ? 'Film bulunamadı'
+                              : 'Dizi bulunamadı',
+                          style: const TextStyle(
                             color: AppTheme.textHint,
                             fontSize: 16,
                           ),
@@ -206,7 +208,7 @@ class _GenreChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive
               ? AppTheme.primary
-              : AppTheme.primary.withOpacity(0.15),
+              : AppTheme.primary.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -230,7 +232,8 @@ class Genre {
   const Genre(this.id, this.name);
 }
 
-const List<Genre> genres = [
+// TMDb Movie Genres
+const List<Genre> _movieGenres = [
   Genre(28, 'Aksiyon'),
   Genre(35, 'Komedi'),
   Genre(18, 'Drama'),
@@ -242,3 +245,21 @@ const List<Genre> genres = [
   Genre(99, 'Belgesel'),
   Genre(10751, 'Aile'),
 ];
+
+// TMDb TV Show Genres (different IDs from movies!)
+const List<Genre> _tvGenres = [
+  Genre(10759, 'Aksiyon & Macera'),
+  Genre(35, 'Komedi'),
+  Genre(18, 'Dram'),
+  Genre(10765, 'Bilim Kurgu & Fantastik'),
+  Genre(9648, 'Gizem'),
+  Genre(80, 'Suç'),
+  Genre(16, 'Animasyon'),
+  Genre(99, 'Belgesel'),
+  Genre(10751, 'Aile'),
+  Genre(10768, 'Savaş & Politik'),
+];
+
+List<Genre> _getGenres(MediaType mediaType) {
+  return mediaType == MediaType.movie ? _movieGenres : _tvGenres;
+}

@@ -8,6 +8,7 @@ import '../../widgets/movie_card.dart';
 import '../../widgets/discussion_card.dart';
 import '../auth/login_screen.dart';
 import '../detail/movie_detail_screen.dart';
+import '../discussion/post_detail_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -374,7 +375,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   } catch (_) {}
                 }
               },
-              onCardTap: () {},
+              onCardTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PostDetailScreen(
+                      postId: postId,
+                      userId: widget.userId,
+                      authorUsername: authorUsername.isNotEmpty
+                          ? authorUsername
+                          : displayUsername,
+                      movieId: movieId,
+                      movieTitle: movieTitle,
+                      content: content,
+                      likesCount: likesCount,
+                      commentsCount: commentsCount,
+                      isLiked: isLiked,
+                      createdAt: createdAt,
+                    ),
+                  ),
+                );
+              },
               onLikeTap: () async {
                 if (currentUserId == null) return;
                 final firestoreService = ref.read(firestoreServiceProvider);
@@ -554,7 +575,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   } catch (_) {}
                 }
               },
-              onCardTap: () {},
+              onCardTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PostDetailScreen(
+                      postId: postId,
+                      userId: postUserId,
+                      authorUsername: authorUsername.isNotEmpty
+                          ? authorUsername
+                          : 'anonim',
+                      movieId: movieId,
+                      movieTitle: movieTitle,
+                      content: content,
+                      likesCount: likesCount,
+                      commentsCount: commentsCount,
+                      isLiked: isLiked,
+                      createdAt: createdAt,
+                    ),
+                  ),
+                );
+              },
               onLikeTap: () async {
                 if (currentUserId == null) return;
                 final firestoreService = ref.read(firestoreServiceProvider);

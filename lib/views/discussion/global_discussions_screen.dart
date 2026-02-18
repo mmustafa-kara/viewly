@@ -8,6 +8,7 @@ import '../../widgets/discussion_card.dart';
 import '../profile/profile_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import 'create_post_bottom_sheet.dart';
+import 'post_detail_screen.dart';
 
 /// Filtered discussions provider — rebuilds when filter state changes
 final filteredDiscussionsProvider = StreamProvider.autoDispose((ref) {
@@ -41,7 +42,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -59,6 +60,51 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                onChanged: (value) => filterNotifier.setSearchQuery(value),
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Film adına göre ara...',
+                  hintStyle: const TextStyle(color: AppTheme.textHint),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppTheme.textHint,
+                  ),
+                  suffixIcon: filterState.searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.clear,
+                            color: AppTheme.textHint,
+                          ),
+                          onPressed: () => filterNotifier.setSearchQuery(''),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppTheme.cardBackground,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // Filter Chips
             Padding(
@@ -127,7 +173,6 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                   var posts = snapshot.docs;
 
                   // Client-side sort for time-filtered + topRated combo
-                  // (Firestore requires orderBy on the inequality field first)
                   if (filterState.timeCutoff != null &&
                       filterState.sortFilter == SortFilter.topRated) {
                     posts = List.from(posts)
@@ -144,34 +189,52 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                       });
                   }
 
+                  // Client-side search filter by movieTitle
+                  final searchQuery = filterState.searchQuery.toLowerCase();
+                  if (searchQuery.isNotEmpty) {
+                    posts = posts.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final movieTitle = (data['movieTitle'] as String? ?? '')
+                          .toLowerCase();
+                      return movieTitle.contains(searchQuery);
+                    }).toList();
+                  }
+
                   if (posts.isEmpty) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.forum_outlined,
+                          Icon(
+                            searchQuery.isNotEmpty
+                                ? Icons.search_off
+                                : Icons.forum_outlined,
                             size: 80,
                             color: AppTheme.textHint,
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            filterState.timeFilter == TimeFilter.all
+                            searchQuery.isNotEmpty
+                                ? 'Bu aramayla eşleşen tartışma bulunamadı'
+                                : filterState.timeFilter == TimeFilter.all
                                 ? 'Henüz tartışma yok'
                                 : 'Bu dönemde tartışma yok',
                             style: const TextStyle(
                               color: AppTheme.textHint,
                               fontSize: 16,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'İlk yorumu sen yap!',
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
+                          if (searchQuery.isEmpty) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'İlk yorumu sen yap!',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     );
@@ -251,7 +314,25 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                           }
                         },
                         onCardTap: () {
-                          // TODO: Navigate to PostDetailScreen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PostDetailScreen(
+                                postId: postId,
+                                userId: userId,
+                                authorUsername: authorUsername.isNotEmpty
+                                    ? authorUsername
+                                    : 'anonim',
+                                movieId: movieId,
+                                movieTitle: movieTitle,
+                                content: content,
+                                likesCount: likesCount,
+                                commentsCount: commentsCount,
+                                isLiked: isLiked,
+                                createdAt: createdAt,
+                              ),
+                            ),
+                          );
                         },
                         onLikeTap: () async {
                           if (currentUserId == null) return;

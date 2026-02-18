@@ -45,17 +45,20 @@ class TMDbService {
     }
   }
 
-  /// Search movies
+  /// Search movies and TV shows (multi search)
   Future<List<MovieModel>> searchMovies(String query) async {
     try {
       final response = await _dio.get(
-        '/search/movie',
+        '/search/multi',
         queryParameters: {'query': query},
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> results = response.data['results'];
-        return results.map((json) => MovieModel.fromJson(json)).toList();
+        return results
+            .where((json) => json['media_type'] != 'person')
+            .map((json) => MovieModel.fromJson(json))
+            .toList();
       } else {
         throw Exception('Arama başarısız');
       }

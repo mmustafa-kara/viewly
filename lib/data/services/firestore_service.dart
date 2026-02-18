@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/movie_model.dart';
+import '../models/comment_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -119,8 +120,13 @@ class FirestoreService {
       query = query
           .where('createdAt', isGreaterThanOrEqualTo: timeCutoff)
           .orderBy('createdAt', descending: true);
+    } else if (sortField == 'likes') {
+      // Top rated without time filter → exclude 0-likes posts
+      query = query
+          .where('likes', isGreaterThan: 0)
+          .orderBy('likes', descending: true);
     } else {
-      // No time filter → free to sort by any field
+      // Newest without time filter
       query = query.orderBy(sortField, descending: true);
     }
 
@@ -228,5 +234,44 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Gönderi silinemedi: $e');
     }
+  }
+
+  // ========== COMMENTS SYSTEM ==========
+
+  /// Add a comment to a post (batch: add comment + increment commentCount)
+  Future<void> addComment(String postId, CommentModel comment) async {
+    try {
+      final batch = _firestore.batch();
+
+      // 1. Add comment document to subcollection
+      final commentRef = _postsCollection
+          .doc(postId)
+          .collection('comments')
+          .doc();
+      batch.set(commentRef, comment.toFirestore());
+
+      // 2. Increment comment count on parent post
+      batch.update(_postsCollection.doc(postId), {
+        'comments': FieldValue.increment(1),
+      });
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Yorum eklenemedi: $e');
+    }
+  }
+
+  /// Stream comments for a post (oldest first)
+  Stream<List<CommentModel>> getComments(String postId) {
+    return _postsCollection
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => CommentModel.fromFirestore(doc.data(), doc.id))
+              .toList();
+        });
   }
 }

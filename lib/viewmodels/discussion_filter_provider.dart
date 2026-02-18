@@ -10,19 +10,23 @@ enum SortFilter { topRated, newest }
 class DiscussionFilterState {
   final TimeFilter timeFilter;
   final SortFilter sortFilter;
+  final String searchQuery;
 
   const DiscussionFilterState({
     this.timeFilter = TimeFilter.all,
     this.sortFilter = SortFilter.topRated,
+    this.searchQuery = '',
   });
 
   DiscussionFilterState copyWith({
     TimeFilter? timeFilter,
     SortFilter? sortFilter,
+    String? searchQuery,
   }) {
     return DiscussionFilterState(
       timeFilter: timeFilter ?? this.timeFilter,
       sortFilter: sortFilter ?? this.sortFilter,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 
@@ -50,6 +54,10 @@ class DiscussionFilterNotifier extends StateNotifier<DiscussionFilterState> {
 
   void setSortFilter(SortFilter filter) {
     state = state.copyWith(sortFilter: filter);
+  }
+
+  void setSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query);
   }
 }
 
