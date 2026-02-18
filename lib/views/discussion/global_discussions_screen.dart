@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
+import '../../widgets/discussion_card.dart';
+import '../profile/profile_screen.dart';
+import '../detail/movie_detail_screen.dart';
+import 'create_post_bottom_sheet.dart';
 
 // Provider for top-rated discussions (sorted by likes)
 final topRatedDiscussionsProvider = StreamProvider.autoDispose((ref) {
@@ -16,6 +20,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final discussions = ref.watch(topRatedDiscussionsProvider);
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       body: SafeArea(
@@ -43,7 +48,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
               ),
             ),
 
-            // Filter chips (placeholder for future)
+            // Filter chips
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SingleChildScrollView(
@@ -107,126 +112,90 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: posts.length,
                     itemBuilder: (context, index) {
-                      final post = posts[index].data() as Map<String, dynamic>;
+                      final doc = posts[index];
+                      final post = doc.data() as Map<String, dynamic>;
+                      final postId = doc.id;
+
+                      final userId = post['userId'] as String? ?? '';
+                      final authorUsername =
+                          post['authorUsername'] as String? ?? '';
+                      final movieId = post['movieId'] as String? ?? '';
+                      final movieTitle =
+                          post['movieTitle'] as String? ?? 'Film';
+                      final content = post['content'] as String? ?? '';
+                      final likesCount = post['likes'] as int? ?? 0;
+                      final commentsCount = post['comments'] as int? ?? 0;
+                      final likedBy = List<String>.from(post['likedBy'] ?? []);
+                      final isLiked =
+                          currentUserId != null &&
+                          likedBy.contains(currentUserId);
+
                       final timestamp = post['createdAt'];
-                      final date = timestamp != null
-                          ? DateFormat('dd MMM yyyy').format(timestamp.toDate())
-                          : '';
+                      final createdAt = timestamp != null
+                          ? timestamp.toDate() as DateTime
+                          : null;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.cardBackground,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // User & Movie Info
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: AppTheme.primary,
-                                  child: Text(
-                                    (post['userId'] ?? 'U')[0].toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.movie,
-                                            size: 14,
-                                            color: AppTheme.secondary,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              post['movieTitle'] ?? 'Film',
-                                              style: const TextStyle(
-                                                color: AppTheme.secondary,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Text(
-                                        date,
-                                        style: const TextStyle(
-                                          color: AppTheme.textHint,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Content
-                            Text(
-                              post['content'] ?? '',
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 15,
-                                height: 1.5,
+                      return DiscussionCard(
+                        postId: postId,
+                        userId: userId,
+                        authorUsername: authorUsername.isNotEmpty
+                            ? authorUsername
+                            : userId.isNotEmpty
+                            ? userId.substring(
+                                0,
+                                userId.length > 6 ? 6 : userId.length,
+                              )
+                            : 'anonim',
+                        movieId: movieId,
+                        movieTitle: movieTitle,
+                        content: content,
+                        likesCount: likesCount,
+                        commentsCount: commentsCount,
+                        isLiked: isLiked,
+                        createdAt: createdAt,
+                        onUsernameTap: () {
+                          if (userId.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProfileScreen(userId: userId),
                               ),
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Stats
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.favorite,
-                                  size: 18,
-                                  color: AppTheme.error,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${post['likes'] ?? 0}',
-                                  style: const TextStyle(
-                                    color: AppTheme.textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                            );
+                          }
+                        },
+                        onMovieTitleTap: () async {
+                          if (movieId.isNotEmpty) {
+                            try {
+                              final tmdbService = ref.read(tmdbServiceProvider);
+                              final movieData = await tmdbService
+                                  .getMovieDetails(int.parse(movieId));
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        MovieDetailScreen(movie: movieData),
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                const Icon(
-                                  Icons.comment_outlined,
-                                  size: 18,
-                                  color: AppTheme.textHint,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${post['comments'] ?? 0}',
-                                  style: const TextStyle(
-                                    color: AppTheme.textHint,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                );
+                              }
+                            } catch (_) {
+                              // Silently ignore if movie cannot be fetched
+                            }
+                          }
+                        },
+                        onCardTap: () {
+                          // TODO: Navigate to PostDetailScreen (placeholder)
+                        },
+                        onLikeTap: () async {
+                          if (currentUserId == null) return;
+                          final firestoreService = ref.read(
+                            firestoreServiceProvider,
+                          );
+                          await firestoreService.toggleLike(
+                            postId,
+                            currentUserId,
+                          );
+                        },
                       );
                     },
                   );
@@ -257,6 +226,20 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
           ],
         ),
       ),
+
+      // Global Post FAB
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const CreatePostBottomSheet(),
+          );
+        },
+        backgroundColor: AppTheme.primary,
+        child: const Icon(Icons.edit, color: Colors.white),
+      ),
     );
   }
 }
@@ -282,7 +265,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive
               ? AppTheme.primary
-              : AppTheme.primary.withOpacity(0.15),
+              : AppTheme.primary.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

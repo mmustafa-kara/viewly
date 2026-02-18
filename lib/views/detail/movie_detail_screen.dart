@@ -368,8 +368,18 @@ class MovieDetailScreen extends ConsumerWidget {
                         firestoreServiceProvider,
                       );
 
+                      // Fetch the user's profile to get authorUsername
+                      final userProfile = await firestoreService.getUser(
+                        user.uid,
+                      );
+                      final authorUsername =
+                          userProfile?.displayUsername ??
+                          user.email?.split('@').first ??
+                          'anonim';
+
                       await firestoreService.createPost(
                         userId: user.uid,
+                        authorUsername: authorUsername,
                         movieId: movie.id.toString(),
                         movieTitle: movie.title,
                         content: content,

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/user_model.dart';
+import '../data/models/movie_model.dart';
 import 'providers.dart';
 
 /// User Profile Provider
@@ -15,6 +16,21 @@ final userProfileProvider = FutureProvider.family<UserModel?, String>((
 final userPostsProvider = StreamProvider.family((ref, String userId) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getUserPosts(userId);
+});
+
+/// Saved Movies Provider (Favorites)
+final savedMoviesProvider = StreamProvider.family<List<MovieModel>, String>((
+  ref,
+  String userId,
+) {
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return firestoreService.getFavoriteMovies(userId);
+});
+
+/// Liked Posts Provider
+final likedPostsProvider = StreamProvider.family((ref, String userId) {
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return firestoreService.getLikedPosts(userId);
 });
 
 /// All Posts Provider (Feed)

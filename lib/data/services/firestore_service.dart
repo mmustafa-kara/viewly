@@ -48,6 +48,7 @@ class FirestoreService {
   /// Create a new post
   Future<void> createPost({
     required String userId,
+    required String authorUsername,
     required String movieId,
     required String movieTitle,
     required String content,
@@ -55,10 +56,12 @@ class FirestoreService {
     try {
       await _postsCollection.add({
         'userId': userId,
+        'authorUsername': authorUsername,
         'movieId': movieId,
         'movieTitle': movieTitle,
         'content': content,
         'likes': 0,
+        'likedBy': <String>[],
         'comments': 0,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -104,15 +107,37 @@ class FirestoreService {
         .snapshots();
   }
 
-  /// Like a post
-  Future<void> likePost(String postId) async {
+  /// Toggle like on a post (Twitter-style: add/remove userId from likedBy array)
+  Future<void> toggleLike(String postId, String currentUserId) async {
     try {
-      await _postsCollection.doc(postId).update({
-        'likes': FieldValue.increment(1),
-      });
+      final doc = await _postsCollection.doc(postId).get();
+      final data = doc.data() as Map<String, dynamic>?;
+      final likedBy = List<String>.from(data?['likedBy'] ?? []);
+
+      if (likedBy.contains(currentUserId)) {
+        // Unlike
+        await _postsCollection.doc(postId).update({
+          'likedBy': FieldValue.arrayRemove([currentUserId]),
+          'likes': FieldValue.increment(-1),
+        });
+      } else {
+        // Like
+        await _postsCollection.doc(postId).update({
+          'likedBy': FieldValue.arrayUnion([currentUserId]),
+          'likes': FieldValue.increment(1),
+        });
+      }
     } catch (e) {
-      throw Exception('Beğeni eklenemedi: $e');
+      throw Exception('Beğeni güncellenemedi: $e');
     }
+  }
+
+  /// Get posts liked by a specific user
+  Stream<QuerySnapshot> getLikedPosts(String userId) {
+    return _postsCollection
+        .where('likedBy', arrayContains: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 
   // ========== FAVORITES SYSTEM (NO orderBy) ==========
