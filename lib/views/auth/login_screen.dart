@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
+import '../main_wrapper.dart';
 import 'sign_up_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -40,11 +41,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _identifierController.text.trim(),
         _passwordController.text,
       );
-      // Auth state change will automatically trigger AuthGate to show MainWrapper
+
+      // Login successful → navigate immediately, don't wait for AuthGate
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainWrapper()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
+        });
+      }
+    } finally {
+      // Always stop the spinner if we're still on this screen
+      if (mounted) {
+        setState(() {
           _isLoading = false;
         });
       }

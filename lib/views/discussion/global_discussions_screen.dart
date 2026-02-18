@@ -3,15 +3,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
+import '../../viewmodels/discussion_filter_provider.dart';
 import '../../widgets/discussion_card.dart';
 import '../profile/profile_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import 'create_post_bottom_sheet.dart';
 
-// Provider for top-rated discussions (sorted by likes)
-final topRatedDiscussionsProvider = StreamProvider.autoDispose((ref) {
+/// Filtered discussions provider — rebuilds when filter state changes
+final filteredDiscussionsProvider = StreamProvider.autoDispose((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.getTopRatedPosts();
+  final filterState = ref.watch(discussionFilterProvider);
+
+  final sortField = filterState.sortFilter == SortFilter.topRated
+      ? 'likes'
+      : 'createdAt';
+
+  return firestoreService.getFilteredPosts(
+    timeCutoff: filterState.timeCutoff,
+    sortField: sortField,
+  );
 });
 
 class GlobalDiscussionsScreen extends ConsumerWidget {
@@ -19,7 +29,9 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final discussions = ref.watch(topRatedDiscussionsProvider);
+    final discussions = ref.watch(filteredDiscussionsProvider);
+    final filterState = ref.watch(discussionFilterProvider);
+    final filterNotifier = ref.read(discussionFilterProvider.notifier);
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
@@ -39,7 +51,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'En çok beğenilen film yorumları',
+                    _getSubtitle(filterState),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.textSecondary,
                     ),
@@ -48,22 +60,59 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
               ),
             ),
 
-            // Filter chips
+            // Filter Chips
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _FilterChip(label: 'Tümü', isActive: true, onTap: () {}),
+                    // ── Time Filters ──
+                    _FilterChip(
+                      label: 'Tümü',
+                      isActive: filterState.timeFilter == TimeFilter.all,
+                      onTap: () => filterNotifier.setTimeFilter(TimeFilter.all),
+                    ),
                     const SizedBox(width: 8),
                     _FilterChip(
                       label: 'Bu Hafta',
-                      isActive: false,
-                      onTap: () {},
+                      isActive: filterState.timeFilter == TimeFilter.thisWeek,
+                      onTap: () =>
+                          filterNotifier.setTimeFilter(TimeFilter.thisWeek),
                     ),
                     const SizedBox(width: 8),
-                    _FilterChip(label: 'Bu Ay', isActive: false, onTap: () {}),
+                    _FilterChip(
+                      label: 'Bu Ay',
+                      isActive: filterState.timeFilter == TimeFilter.thisMonth,
+                      onTap: () =>
+                          filterNotifier.setTimeFilter(TimeFilter.thisMonth),
+                    ),
+
+                    const SizedBox(width: 16),
+                    // Divider between filter groups
+                    Container(
+                      width: 1,
+                      height: 24,
+                      color: AppTheme.textHint.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // ── Sort Filters ──
+                    _FilterChip(
+                      label: 'En Çok Beğenilen',
+                      icon: Icons.favorite,
+                      isActive: filterState.sortFilter == SortFilter.topRated,
+                      onTap: () =>
+                          filterNotifier.setSortFilter(SortFilter.topRated),
+                    ),
+                    const SizedBox(width: 8),
+                    _FilterChip(
+                      label: 'En Yeni',
+                      icon: Icons.schedule,
+                      isActive: filterState.sortFilter == SortFilter.newest,
+                      onTap: () =>
+                          filterNotifier.setSortFilter(SortFilter.newest),
+                    ),
                   ],
                 ),
               ),
@@ -75,28 +124,48 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
             Expanded(
               child: discussions.when(
                 data: (snapshot) {
-                  final posts = snapshot.docs;
+                  var posts = snapshot.docs;
+
+                  // Client-side sort for time-filtered + topRated combo
+                  // (Firestore requires orderBy on the inequality field first)
+                  if (filterState.timeCutoff != null &&
+                      filterState.sortFilter == SortFilter.topRated) {
+                    posts = List.from(posts)
+                      ..sort((a, b) {
+                        final aLikes =
+                            (a.data() as Map<String, dynamic>)['likes']
+                                as int? ??
+                            0;
+                        final bLikes =
+                            (b.data() as Map<String, dynamic>)['likes']
+                                as int? ??
+                            0;
+                        return bLikes.compareTo(aLikes);
+                      });
+                  }
 
                   if (posts.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.forum_outlined,
                             size: 80,
                             color: AppTheme.textHint,
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
-                            'Henüz tartışma yok',
-                            style: TextStyle(
+                            filterState.timeFilter == TimeFilter.all
+                                ? 'Henüz tartışma yok'
+                                : 'Bu dönemde tartışma yok',
+                            style: const TextStyle(
                               color: AppTheme.textHint,
                               fontSize: 16,
                             ),
                           ),
-                          SizedBox(height: 8),
-                          Text(
+                          const SizedBox(height: 8),
+                          const Text(
                             'İlk yorumu sen yap!',
                             style: TextStyle(
                               color: AppTheme.textSecondary,
@@ -178,13 +247,11 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                                   ),
                                 );
                               }
-                            } catch (_) {
-                              // Silently ignore if movie cannot be fetched
-                            }
+                            } catch (_) {}
                           }
                         },
                         onCardTap: () {
-                          // TODO: Navigate to PostDetailScreen (placeholder)
+                          // TODO: Navigate to PostDetailScreen
                         },
                         onLikeTap: () async {
                           if (currentUserId == null) return;
@@ -242,15 +309,30 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  String _getSubtitle(DiscussionFilterState state) {
+    final time = switch (state.timeFilter) {
+      TimeFilter.all => 'Tüm zamanlar',
+      TimeFilter.thisWeek => 'Bu hafta',
+      TimeFilter.thisMonth => 'Bu ay',
+    };
+    final sort = switch (state.sortFilter) {
+      SortFilter.topRated => 'en çok beğenilen',
+      SortFilter.newest => 'en yeni',
+    };
+    return '$time · $sort';
+  }
 }
 
 class _FilterChip extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final bool isActive;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
+    this.icon,
     required this.isActive,
     required this.onTap,
   });
@@ -260,21 +342,35 @@ class _FilterChip extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
               ? AppTheme.primary
               : AppTheme.primary.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : AppTheme.primary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: isActive ? Colors.white : AppTheme.primary,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : AppTheme.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

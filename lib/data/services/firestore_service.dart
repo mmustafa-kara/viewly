@@ -107,6 +107,26 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Get posts with dynamic filters (time + sort)
+  Stream<QuerySnapshot> getFilteredPosts({
+    DateTime? timeCutoff,
+    required String sortField, // 'likes' or 'createdAt'
+  }) {
+    Query query = _postsCollection;
+
+    if (timeCutoff != null) {
+      // When filtering by time, Firestore requires orderBy on the inequality field first
+      query = query
+          .where('createdAt', isGreaterThanOrEqualTo: timeCutoff)
+          .orderBy('createdAt', descending: true);
+    } else {
+      // No time filter → free to sort by any field
+      query = query.orderBy(sortField, descending: true);
+    }
+
+    return query.limit(50).snapshots();
+  }
+
   /// Toggle like on a post (Twitter-style: add/remove userId from likedBy array)
   Future<void> toggleLike(String postId, String currentUserId) async {
     try {
