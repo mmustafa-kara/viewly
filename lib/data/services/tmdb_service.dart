@@ -11,9 +11,12 @@ class TMDbService {
   );
 
   /// Get trending movies (today)
-  Future<List<MovieModel>> getTrendingMovies() async {
+  Future<List<MovieModel>> getTrendingMovies({int page = 1}) async {
     try {
-      final response = await _dio.get('/trending/movie/day');
+      final response = await _dio.get(
+        '/trending/movie/day',
+        queryParameters: {'page': page},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> results = response.data['results'];
@@ -71,12 +74,14 @@ class TMDbService {
   Future<List<MovieModel>> discoverByGenre({
     required String mediaType, // 'movie' or 'tv'
     int? genreId,
+    int page = 1,
   }) async {
     try {
       final queryParams = <String, dynamic>{
         'api_key': Config.tmdbApiKey,
         'language': 'tr-TR',
         'sort_by': 'popularity.desc',
+        'page': page,
       };
 
       if (genreId != null) {

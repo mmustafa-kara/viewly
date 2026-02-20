@@ -9,6 +9,7 @@ import '../../viewmodels/providers.dart';
 import '../detail/movie_detail_screen.dart';
 import '../search/search_screen.dart';
 import '../catalog/catalog_screen.dart';
+import '../../viewmodels/catalog_provider.dart'; // Immanuel: Import for MediaType
 
 // Provider for trending TV shows
 final trendingTVProvider = FutureProvider.autoDispose((ref) async {
@@ -76,7 +77,7 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Trend Filmler',
+                      'En Çok Konuşulan Filmler',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
@@ -170,7 +171,7 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Trend Diziler',
+                      'Dikkat Çeken Diziler',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
