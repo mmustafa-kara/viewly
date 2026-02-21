@@ -110,6 +110,17 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Get a single post data by its ID
+  Future<Map<String, dynamic>?> getPostById(String postId) async {
+    final doc = await _postsCollection.doc(postId).get();
+    if (!doc.exists || doc.data() == null) {
+      return null;
+    }
+    final data = doc.data() as Map<String, dynamic>;
+    data['id'] = doc.id; // Inject ID for navigation reference
+    return data;
+  }
+
   /// Get posts from a specific user
   Stream<QuerySnapshot> getUserPosts(String userId) {
     return _postsCollection
@@ -248,19 +259,23 @@ class FirestoreService {
         });
   }
 
-  /// Delete a post
-  Future<void> deletePost(String postId, String userId) async {
-    try {
-      await _postsCollection.doc(postId).delete();
-
-      // Decrement user's posts count
-      await _usersCollection.doc(userId).update({
-        'postsCount': FieldValue.increment(-1),
-      });
-    } catch (e) {
-      throw Exception('Gönderi silinemedi: $e');
-    }
+  /// Edit a post
+  Future<void> editPost(String postId, String newContent) async {
+    await _firestore.collection('posts').doc(postId).update({
+      'content': newContent,
+    });
   }
+
+  /// Delete a post
+  Future<void> deletePost(String postId) async {
+    await _firestore.collection('posts').doc(postId).delete();
+  }
+
+  // The original deletePost method was here, but it's being replaced/modified by the instruction.
+  // The instruction provided a partial line "/// Toggle Like on a Post _usersCollection.doc(userId).update({"
+  // which seems to be a fragment and is not syntactically correct in this context.
+  // Assuming the intent was to replace the old deletePost with the new one and add editPost.
+  // The fragment is omitted to maintain syntactical correctness.
 
   // ========== COMMENTS SYSTEM ==========
 
@@ -296,7 +311,13 @@ class FirestoreService {
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
-              .map((doc) => CommentModel.fromFirestore(doc.data(), doc.id))
+              .map(
+                (doc) => CommentModel.fromFirestore(
+                  doc.data(),
+                  doc.id,
+                  postId: doc.reference.parent.parent?.id,
+                ),
+              )
               .toList();
         });
   }
@@ -443,6 +464,44 @@ class FirestoreService {
     batch.delete(targetUserSentRef);
 
     await batch.commit();
+  }
+
+  /// Delete a comment
+  Future<void> deleteComment(String postId, String commentId) async {
+    final postRef = _firestore.collection('posts').doc(postId);
+    final commentRef = postRef.collection('comments').doc(commentId);
+
+    final batch = _firestore.batch();
+    batch.delete(commentRef);
+    batch.update(postRef, {
+      'comments': FieldValue.increment(
+        -1,
+      ), // Changed 'commentCount' to 'comments' to match existing field
+    });
+
+    await batch.commit();
+  }
+
+  /// Get user's comments efficiently using a CollectionGroup query
+  /// NOTE: This query requires a Composite Index in Firebase:
+  /// Collection: comments
+  /// Fields: authorId (Ascending) + createdAt (Descending)
+  Future<List<CommentModel>> getUserComments(String userId) async {
+    final snapshot = await _firestore
+        .collectionGroup('comments')
+        .where('authorId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map(
+          (doc) => CommentModel.fromFirestore(
+            doc.data(),
+            doc.id,
+            postId: doc.reference.parent.parent?.id,
+          ),
+        )
+        .toList();
   }
 
   /// Get Incoming Friend Requests

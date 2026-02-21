@@ -171,6 +171,28 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       currentUserId,
                     );
                   },
+                  onDeleteTap: () async {
+                    if (currentUserId == null) return;
+                    final firestoreService = ref.read(firestoreServiceProvider);
+                    try {
+                      await firestoreService.deletePost(widget.postId);
+                      if (context.mounted) {
+                        Navigator.pop(
+                          context,
+                        ); // Go back after deleting the post
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tartışma silindi')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+                      }
+                    }
+                  },
+                  currentUserId: currentUserId,
                 ),
 
                 // Divider
@@ -229,7 +251,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
                     return Column(
                       children: commentList
-                          .map((comment) => _CommentTile(comment: comment))
+                          .map(
+                            (comment) => _CommentTile(
+                              comment: comment,
+                              currentUserId: currentUserId ?? '',
+                              postId: widget.postId,
+                            ),
+                          )
                           .toList(),
                     );
                   },
@@ -331,13 +359,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 }
 
 /// Individual comment tile widget
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends ConsumerWidget {
   final CommentModel comment;
+  final String currentUserId;
+  final String postId;
 
-  const _CommentTile({required this.comment});
+  const _CommentTile({
+    required this.comment,
+    required this.currentUserId,
+    required this.postId,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -381,6 +415,79 @@ class _CommentTile extends StatelessWidget {
               ),
             ],
           ),
+          // Actions
+          if (currentUserId == comment.authorId)
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: Colors.red,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Text('Yorumu Sil'),
+                      content: const Text(
+                        'Bu yorumu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('İptal'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(dialogContext); // Close dialog
+
+                            try {
+                              final firestoreService = ref.read(
+                                firestoreServiceProvider,
+                              );
+                              await firestoreService.deleteComment(
+                                postId,
+                                comment.id ?? '',
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Yorum silindi'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Yorum silinemedi: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Sil'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           const SizedBox(height: 8),
           // Content
           Text(

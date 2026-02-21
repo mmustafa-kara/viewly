@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/theme.dart';
 import '../../data/services/firestore_service.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
 import '../../widgets/movie_card.dart';
 import '../../widgets/discussion_card.dart';
+import '../main_wrapper.dart';
 import '../auth/login_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import '../discussion/post_detail_screen.dart';
@@ -50,138 +52,225 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: const Text('Profil'),
         leading: _isRootTab
-            ? (_isOwner
-                  ? IconButton(
-                      icon: const Icon(Icons.logout),
-                      tooltip: 'Çıkış Yap',
-                      onPressed: () async {
-                        final authService = ref.read(authServiceProvider);
-                        await authService.signOut();
-                        if (context.mounted) {
-                          Navigator.of(
-                            context,
-                            rootNavigator: true,
-                          ).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        }
-                      },
-                    )
-                  : null)
+            ? null
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
                 tooltip: 'Geri',
                 onPressed: () => Navigator.pop(context),
               ),
-        actions: _isOwner
-            ? [
-                Consumer(
-                  builder: (context, ref, child) {
-                    final requestsAsync = ref.watch(
-                      incomingRequestsProvider(_effectiveUserId),
-                    );
+        actions: [
+          if (!_isRootTab)
+            IconButton(
+              icon: const Icon(Icons.home_outlined),
+              tooltip: 'Ana Sayfa',
+              onPressed: () {
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const MainWrapper()),
+                  (route) => false,
+                );
+              },
+            ),
+          if (_isOwner) ...[
+            Consumer(
+              builder: (context, ref, child) {
+                final requestsAsync = ref.watch(
+                  incomingRequestsProvider(_effectiveUserId),
+                );
 
-                    return requestsAsync.when(
-                      data: (requests) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications),
-                              tooltip: 'Gelen İstekler',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FriendRequestsScreen(
-                                      userId: _effectiveUserId,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            if (requests.isNotEmpty)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '${requests.length}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                return requestsAsync.when(
+                  data: (requests) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications),
+                          tooltip: 'Gelen İstekler',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FriendRequestsScreen(
+                                  userId: _effectiveUserId,
                                 ),
                               ),
-                          ],
-                        );
-                      },
-                      loading: () => IconButton(
-                        icon: const Icon(Icons.notifications),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FriendRequestsScreen(
-                                userId: _effectiveUserId,
+                            );
+                          },
+                        ),
+                        if (requests.isNotEmpty)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${requests.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                      error: (_, _) => IconButton(
-                        icon: const Icon(Icons.notifications),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FriendRequestsScreen(
-                                userId: _effectiveUserId,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                          ),
+                      ],
                     );
                   },
-                ),
-                PopupMenuButton(
-                  icon: const Icon(Icons.more_vert),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      child: const Row(
+                  loading: () => IconButton(
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              FriendRequestsScreen(userId: _effectiveUserId),
+                        ),
+                      );
+                    },
+                  ),
+                  error: (_, _) => IconButton(
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              FriendRequestsScreen(userId: _effectiveUserId),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) async {
+                if (value == 'logout') {
+                  final authService = ref.read(authServiceProvider);
+                  await authService.signOut();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    ).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                } else if (value == 'delete') {
+                  showDialog(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Row(
                         children: [
-                          Icon(Icons.edit, size: 20),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red,
+                            size: 28,
+                          ),
                           SizedBox(width: 12),
-                          Text('Profili Düzenle'),
+                          Text('Hesabı Sil'),
                         ],
                       ),
-                      onTap: () {},
-                    ),
-                    PopupMenuItem(
-                      child: const Row(
-                        children: [
-                          Icon(Icons.settings, size: 20),
-                          SizedBox(width: 12),
-                          Text('Ayarlar'),
-                        ],
+                      content: const Text(
+                        'Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz tamamen silinir.',
+                        style: TextStyle(fontSize: 15, height: 1.4),
                       ),
-                      onTap: () {},
+                      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('İptal'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(dialogContext); // Close dialog
+
+                            // Show loading indicator
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+
+                            try {
+                              final authService = ref.read(authServiceProvider);
+                              await authService.deleteAccount();
+
+                              if (context.mounted) {
+                                Navigator.pop(
+                                  context,
+                                ); // Close loading indicator
+                                Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                ).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(
+                                  context,
+                                ); // Close loading indicator
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Sil'),
+                        ),
+                      ],
                     ),
-                  ],
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 12),
+                      Text('Çıkış Yap'),
+                    ],
+                  ),
                 ),
-              ]
-            : null,
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_forever, size: 20, color: Colors.red),
+                      SizedBox(width: 12),
+                      Text('Hesabı Sil', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
       body: userProfile.when(
         data: (user) {
@@ -283,6 +372,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           child: _StatItem(
                             label: 'ARKADAŞLAR',
                             value: friendCountAsync.when(
+                              // ignore: avoid_types_as_parameter_names
                               data: (count) => _formatNumber(count),
                               loading: () => '...',
                               error: (_, _) => '-',
@@ -374,6 +464,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             isActive: _selectedTabIndex == 2,
                             onTap: () => setState(() => _selectedTabIndex = 2),
                           ),
+                          _TabButton(
+                            label: 'Yorumlarım',
+                            isActive: _selectedTabIndex == 3,
+                            onTap: () => setState(() => _selectedTabIndex = 3),
+                          ),
                         ],
                       ),
                     ),
@@ -388,8 +483,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       )
                     else if (_selectedTabIndex == 1)
                       _buildSavedMoviesTab(savedMovies)
+                    else if (_selectedTabIndex == 2)
+                      _buildLikedPostsTab(likedPosts, currentUserId)
                     else
-                      _buildLikedPostsTab(likedPosts, currentUserId),
+                      _buildUserCommentsTab(currentUserId!),
                   ],
                 ),
               ],
@@ -414,6 +511,217 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUserCommentsTab(String userId) {
+    if (userId.isEmpty) return const SizedBox.shrink();
+
+    return Consumer(
+      builder: (context, ref, _) {
+        final commentsAsync = ref.watch(userCommentsProvider(userId));
+
+        return commentsAsync.when(
+          data: (comments) {
+            if (comments.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.comment_outlined,
+                        size: 48,
+                        color: AppTheme.textHint,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Henüz hiç yorum yapmadınız.',
+                        style: TextStyle(
+                          color: AppTheme.textHint,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: comments.length,
+              itemBuilder: (context, index) {
+                final comment = comments[index];
+
+                String dateStr = '';
+                try {
+                  final now = DateTime.now();
+                  final diff = now.difference(comment.createdAt);
+                  if (diff.inMinutes < 1) {
+                    dateStr = 'az önce';
+                  } else if (diff.inMinutes < 60)
+                    // ignore: curly_braces_in_flow_control_structures
+                    dateStr = '${diff.inMinutes}dk';
+                  else if (diff.inHours < 24)
+                    // ignore: curly_braces_in_flow_control_structures
+                    dateStr = '${diff.inHours}sa';
+                  else if (diff.inDays < 7)
+                    // ignore: curly_braces_in_flow_control_structures
+                    dateStr = '${diff.inDays}g';
+                  else
+                    // ignore: curly_braces_in_flow_control_structures
+                    dateStr =
+                        '${comment.createdAt.day}/${comment.createdAt.month}/${comment.createdAt.year}';
+                } catch (_) {}
+
+                return Card(
+                  color: AppTheme.surface,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    onTap: () async {
+                      if (comment.postId == null) return;
+
+                      // Show loading dialog
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext c) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        },
+                      );
+
+                      try {
+                        final firestoreService = ref.read(
+                          firestoreServiceProvider,
+                        );
+                        final postData = await firestoreService.getPostById(
+                          comment.postId!,
+                        );
+
+                        if (context.mounted) {
+                          Navigator.pop(context); // Close loading dialog
+
+                          if (postData != null) {
+                            final postId = postData['id'] as String;
+                            final postUserId =
+                                postData['userId'] as String? ?? '';
+                            final postAuthorUsername =
+                                postData['authorUsername'] as String? ?? '';
+                            final movieId =
+                                postData['movieId'] as String? ?? '';
+                            final movieTitle =
+                                postData['movieTitle'] as String? ?? '';
+                            final content =
+                                postData['content'] as String? ?? '';
+                            final likesCount = postData['likes'] as int? ?? 0;
+                            final commentsCount =
+                                postData['comments'] as int? ?? 0;
+                            final likedBy = List<String>.from(
+                              postData['likedBy'] ?? [],
+                            );
+                            final isLiked =
+                                userId.isNotEmpty && likedBy.contains(userId);
+                            final timestamp = postData['createdAt'];
+                            final createdAt = timestamp != null
+                                ? (timestamp as Timestamp).toDate()
+                                : null;
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PostDetailScreen(
+                                  postId: postId,
+                                  userId: postUserId,
+                                  authorUsername: postAuthorUsername,
+                                  movieId: movieId,
+                                  movieTitle: movieTitle,
+                                  content: content,
+                                  likesCount: likesCount,
+                                  commentsCount: commentsCount,
+                                  isLiked: isLiked,
+                                  createdAt: createdAt,
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Bu tartışma silinmiş veya artık mevcut değil.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          Navigator.pop(context); // Close loading dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Tartışmaya gidilirken bir hata oluştu.',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    leading: const Icon(
+                      Icons.comment_rounded,
+                      color: AppTheme.primary,
+                      size: 24,
+                    ),
+                    title: Text(
+                      comment.content,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        dateStr,
+                        style: const TextStyle(
+                          color: AppTheme.textHint,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            ),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Text(
+                'Yorumlar yüklenirken bir hata oluştu.',
+                style: const TextStyle(color: AppTheme.error),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -933,20 +1241,23 @@ class _TabButton extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isActive ? AppTheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              bottom: BorderSide(
+                color: isActive ? AppTheme.primary : Colors.transparent,
+                width: 2,
+              ),
+            ),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isActive ? Colors.white : AppTheme.textHint,
+              color: isActive ? AppTheme.primary : AppTheme.textHint,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               fontSize: 12,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ),

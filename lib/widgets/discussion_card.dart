@@ -18,6 +18,8 @@ class DiscussionCard extends StatelessWidget {
   final VoidCallback? onMovieTitleTap;
   final VoidCallback? onCardTap;
   final VoidCallback? onLikeTap;
+  final VoidCallback? onDeleteTap;
+  final String? currentUserId;
 
   const DiscussionCard({
     super.key,
@@ -35,6 +37,8 @@ class DiscussionCard extends StatelessWidget {
     this.onMovieTitleTap,
     this.onCardTap,
     this.onLikeTap,
+    this.onDeleteTap,
+    this.currentUserId,
   });
 
   @override
@@ -128,6 +132,51 @@ class DiscussionCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (currentUserId == userId && onDeleteTap != null)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 22,
+                    ),
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.only(left: 8),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: const Text('Tartışmayı Sil'),
+                          content: const Text(
+                            'Bu tartışmayı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: const Text('İptal'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(dialogContext); // Close dialog
+                                onDeleteTap!();
+                              },
+                              child: const Text('Sil'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
             const SizedBox(height: 12),

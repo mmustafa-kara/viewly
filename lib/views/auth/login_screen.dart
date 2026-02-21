@@ -174,7 +174,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // TODO: Implement forgot password
+                        final emailController = TextEditingController();
+                        showDialog(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            backgroundColor: AppTheme.surface,
+                            title: const Text('Şifre Sıfırlama'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Kayıtlı e-posta adresinizi girin. Size bir şifre sıfırlama bağlantısı göndereceğiz.',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: const InputDecoration(
+                                    labelText: 'E-posta Adresi',
+                                    hintText: 'ornek@email.com',
+                                    prefixIcon: Icon(Icons.email_outlined),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: const Text('İptal'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  final email = emailController.text.trim();
+                                  if (email.isEmpty) return;
+
+                                  // Show brief loading
+                                  showDialog(
+                                    context: dialogContext,
+                                    barrierDismissible: false,
+                                    builder: (_) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+
+                                  try {
+                                    await ref
+                                        .read(authServiceProvider)
+                                        .resetPassword(email);
+                                    if (dialogContext.mounted) {
+                                      Navigator.pop(dialogContext); // loading
+                                      Navigator.pop(
+                                        dialogContext,
+                                      ); // main dialog
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Şifre sıfırlama bağlantısı gönderildi. Lütfen Spam/Gereksiz kutunuzu da kontrol edin.',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (dialogContext.mounted) {
+                                      Navigator.pop(dialogContext); // loading
+                                      ScaffoldMessenger.of(
+                                        dialogContext,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(e.toString())),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text('Gönder'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                       child: Text(
                         'Şifremi Unuttum',
@@ -270,14 +350,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       _SocialButton(
                         icon: Icons.g_mobiledata,
                         onTap: () {
-                          // TODO: Google Sign In
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Sosyal medya ile giriş yakında eklenecektir.',
+                              ),
+                            ),
+                          );
                         },
                       ),
                       const SizedBox(width: 16),
                       _SocialButton(
                         icon: Icons.apple,
                         onTap: () {
-                          // TODO: Apple Sign In
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Sosyal medya ile giriş yakında eklenecektir.',
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -321,7 +413,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          _showInfoSheet(
+                            context,
+                            'Kullanım Koşulları',
+                            'CineTalk platformunda küfür, hakaret ve spoiler içeren paylaşımlar yapmak yasaktır. Kurallara uymayan hesaplar kalıcı olarak silinebilir.',
+                          );
+                        },
                         child: const Text(
                           'Kullanım Koşulları',
                           style: TextStyle(
@@ -335,7 +433,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(color: AppTheme.textHint),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          _showInfoSheet(
+                            context,
+                            'Gizlilik Politikası (KVKK)',
+                            'CineTalk, kişisel verilerinizi (e-posta, kullanıcı adı) 6698 sayılı KVKK kapsamında yalnızca uygulama içi kimlik doğrulama ve hizmet sunumu amacıyla saklar. Verileriniz 3. şahıslarla paylaşılmaz. İstediğiniz zaman profil ayarlarından hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.',
+                          );
+                        },
                         child: const Text(
                           'Gizlilik Politikası',
                           style: TextStyle(
@@ -349,7 +453,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(color: AppTheme.textHint),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          _showInfoSheet(
+                            context,
+                            'Yardım & Destek',
+                            'Uygulama ile ilgili yaşadığınız teknik sorunlar, görüş ve önerileriniz için support@cinetalk.com adresinden bizimle iletişime geçebilirsiniz.',
+                          );
+                        },
                         child: const Text(
                           'Yardım',
                           style: TextStyle(
@@ -366,6 +476,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showInfoSheet(BuildContext context, String title, String content) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: AppTheme.textHint.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    content,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Close Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Kapat'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -42,6 +42,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kayıt işlemi başarıyla tamamlandı! Hoş geldiniz.'),
+          ),
+        );
+      }
       // Auth state change will automatically trigger AuthGate to show MainWrapper.
       // Firestore user document is already saved inside AuthService.
     } catch (e) {

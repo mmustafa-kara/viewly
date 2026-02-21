@@ -137,6 +137,28 @@ class AuthService {
     }
   }
 
+  /// Delete current user account
+  Future<void> deleteAccount() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Delete user's document from Firestore first
+        await _firestore.collection('users').doc(user.uid).delete();
+        // Then delete the Firebase Auth user
+        await user.delete();
+      } else {
+        throw 'Oturum açık bir kullanıcı bulunamadı.';
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw 'Bu işlem hassas olduğu için yeniden giriş yapmanız gerekmektedir. Lütfen çıkış yapıp tekrar girin.';
+      }
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Hesap silinirken bir hata oluştu: $e';
+    }
+  }
+
   /// Handle Firebase Auth exceptions
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
