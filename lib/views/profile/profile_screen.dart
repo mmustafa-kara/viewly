@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../data/services/firestore_service.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
 import '../../widgets/movie_card.dart';
@@ -9,11 +10,14 @@ import '../../widgets/discussion_card.dart';
 import '../auth/login_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import '../discussion/post_detail_screen.dart';
+import 'friends_screen.dart';
+import 'user_search_screen.dart';
+import 'friend_requests_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  final String userId;
+  final String? visitedUserId;
 
-  const ProfileScreen({super.key, required this.userId});
+  const ProfileScreen({super.key, this.visitedUserId});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -22,54 +26,135 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   int _selectedTabIndex = 0;
 
+  String get _effectiveUserId =>
+      widget.visitedUserId ?? FirebaseAuth.instance.currentUser!.uid;
+
+  bool get _isRootTab => widget.visitedUserId == null;
+
   /// Determine if the current auth user is the owner of this profile
   bool get _isOwner {
     final currentUser = FirebaseAuth.instance.currentUser;
-    return currentUser != null && currentUser.uid == widget.userId;
+    return currentUser != null && currentUser.uid == _effectiveUserId;
   }
 
   @override
   Widget build(BuildContext context) {
-    final userProfile = ref.watch(userProfileProvider(widget.userId));
-    final userPosts = ref.watch(userPostsProvider(widget.userId));
-    final savedMovies = ref.watch(savedMoviesProvider(widget.userId));
-    final likedPosts = ref.watch(likedPostsProvider(widget.userId));
+    final userProfile = ref.watch(userProfileProvider(_effectiveUserId));
+    final userPosts = ref.watch(userPostsProvider(_effectiveUserId));
+    final savedMovies = ref.watch(savedMoviesProvider(_effectiveUserId));
+    final likedPosts = ref.watch(likedPostsProvider(_effectiveUserId));
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-
-    final canPop = Navigator.of(context).canPop();
+    final friendCountAsync = ref.watch(friendCountProvider(_effectiveUserId));
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
-        leading: canPop
-            // Pushed onto the stack → always show Back button
-            ? IconButton(
+        leading: _isRootTab
+            ? (_isOwner
+                  ? IconButton(
+                      icon: const Icon(Icons.logout),
+                      tooltip: 'Çıkış Yap',
+                      onPressed: () async {
+                        final authService = ref.read(authServiceProvider);
+                        await authService.signOut();
+                        if (context.mounted) {
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      },
+                    )
+                  : null)
+            : IconButton(
                 icon: const Icon(Icons.arrow_back),
                 tooltip: 'Geri',
                 onPressed: () => Navigator.pop(context),
-              )
-            // Root tab profile → show Logout (only if owner)
-            : _isOwner
-            ? IconButton(
-                icon: const Icon(Icons.logout),
-                tooltip: 'Çıkış Yap',
-                onPressed: () async {
-                  final authService = ref.read(authServiceProvider);
-                  await authService.signOut();
-                  if (context.mounted) {
-                    Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    ).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  }
-                },
-              )
-            : null,
+              ),
         actions: _isOwner
             ? [
+                Consumer(
+                  builder: (context, ref, child) {
+                    final requestsAsync = ref.watch(
+                      incomingRequestsProvider(_effectiveUserId),
+                    );
+
+                    return requestsAsync.when(
+                      data: (requests) {
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications),
+                              tooltip: 'Gelen İstekler',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FriendRequestsScreen(
+                                      userId: _effectiveUserId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            if (requests.isNotEmpty)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '${requests.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                      loading: () => IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FriendRequestsScreen(
+                                userId: _effectiveUserId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      error: (_, _) => IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FriendRequestsScreen(
+                                userId: _effectiveUserId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
                 PopupMenuButton(
                   icon: const Icon(Icons.more_vert),
                   itemBuilder: (context) => [
@@ -111,6 +196,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           return SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 24),
 
@@ -178,9 +264,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _StatItem(
-                        label: 'TAKİPÇİ',
-                        value: _formatNumber(user.followersCount),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  FriendsScreen(userId: _effectiveUserId),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 4.0,
+                          ),
+                          child: _StatItem(
+                            label: 'ARKADAŞLAR',
+                            value: friendCountAsync.when(
+                              data: (count) => _formatNumber(count),
+                              loading: () => '...',
+                              error: (_, _) => '-',
+                            ),
+                          ),
+                        ),
                       ),
                       Container(
                         width: 1,
@@ -188,36 +296,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         color: AppTheme.textHint.withValues(alpha: 0.2),
                       ),
                       _StatItem(
-                        label: 'TAKİP',
-                        value: _formatNumber(user.followingCount),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: AppTheme.textHint.withValues(alpha: 0.2),
-                      ),
-                      _StatItem(
-                        label: 'TARTIŞMA',
+                        label: 'TARTIŞMALAR',
                         value: _formatNumber(user.postsCount),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // Share Profile Button (Owner only)
-                if (_isOwner)
+                // Action Button (Owner: Arkadaş Bul, Visitor: Dynamic Friendship Button)
+                if (currentUserId != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        child: const Text('Profili Paylaş'),
-                      ),
-                    ),
+                    child: _isOwner
+                        ? Center(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.person_search),
+                              label: const Text(
+                                'Arkadaş Bul',
+                                textAlign: TextAlign.center,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const UserSearchScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(200, 48),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          )
+                        : _buildFriendshipButton(
+                            currentUserId,
+                            _effectiveUserId,
+                            ref,
+                          ),
                   ),
+
+                const SizedBox(height: 20),
 
                 // Tabs
                 Column(
@@ -345,7 +471,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             return DiscussionCard(
               postId: postId,
-              userId: widget.userId,
+              userId: _effectiveUserId,
               authorUsername: authorUsername.isNotEmpty
                   ? authorUsername
                   : displayUsername,
@@ -381,7 +507,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   MaterialPageRoute(
                     builder: (_) => PostDetailScreen(
                       postId: postId,
-                      userId: widget.userId,
+                      userId: _effectiveUserId,
                       authorUsername: authorUsername.isNotEmpty
                           ? authorUsername
                           : displayUsername,
@@ -548,11 +674,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               isLiked: isLiked,
               createdAt: createdAt,
               onUsernameTap: () {
-                if (postUserId.isNotEmpty && postUserId != widget.userId) {
+                if (postUserId.isNotEmpty && postUserId != _effectiveUserId) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProfileScreen(userId: postUserId),
+                      builder: (_) => ProfileScreen(visitedUserId: postUserId),
                     ),
                   );
                 }
@@ -619,6 +745,162 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: const TextStyle(color: AppTheme.error),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFriendshipButton(
+    String currentUserId,
+    String targetUserId,
+    WidgetRef ref,
+  ) {
+    final statusAsync = ref.watch(
+      friendshipStatusProvider(
+        FriendshipArgs(
+          currentUserId: currentUserId,
+          targetUserId: targetUserId,
+        ),
+      ),
+    );
+
+    return Center(
+      child: statusAsync.when(
+        data: (status) {
+          String label;
+          IconData icon;
+          VoidCallback? onPressed;
+          bool isOutlined = false;
+
+          final firestoreService = ref.read(firestoreServiceProvider);
+
+          switch (status) {
+            case FriendshipStatus.notFriends:
+              label = 'Arkadaş Ekle';
+              icon = Icons.person_add;
+              onPressed = () async {
+                try {
+                  await firestoreService.sendFriendRequest(
+                    currentUserId,
+                    targetUserId,
+                  );
+                  if (context.mounted) {
+                    // ignore: use_build_context_synchronously
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Arkadaşlık isteği gönderildi.'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      // ignore: use_build_context_synchronously
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+                  }
+                }
+              };
+              break;
+            case FriendshipStatus.requestSent:
+              label = 'İstek Gönderildi';
+              icon = Icons.how_to_reg;
+              isOutlined = true;
+              onPressed = () async {
+                try {
+                  await firestoreService.cancelFriendRequest(
+                    currentUserId,
+                    targetUserId,
+                  );
+                  if (context.mounted) {
+                    // ignore: use_build_context_synchronously
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('İstek iptal edildi.')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      // ignore: use_build_context_synchronously
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+                  }
+                }
+              };
+              break;
+            case FriendshipStatus.requestReceived:
+              label = 'İsteği Yanıtla';
+              icon = Icons.playlist_add_check;
+              onPressed = () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Yakında eklenecek')),
+                );
+              };
+              break;
+            case FriendshipStatus.friends:
+              label = 'Arkadaşlardan Çıkar';
+              icon = Icons.person_remove;
+              isOutlined = true;
+              onPressed = () async {
+                try {
+                  await firestoreService.removeFriend(
+                    currentUserId,
+                    targetUserId,
+                  );
+                  if (context.mounted) {
+                    // ignore: use_build_context_synchronously
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Arkadaşlıktan çıkarıldı.')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      // ignore: use_build_context_synchronously
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Hata: $e')));
+                  }
+                }
+              };
+              break;
+          }
+
+          if (isOutlined) {
+            return OutlinedButton.icon(
+              icon: Icon(icon),
+              label: Text(label, textAlign: TextAlign.center),
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(200, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            );
+          }
+
+          return ElevatedButton.icon(
+            icon: Icon(icon),
+            label: Text(label, textAlign: TextAlign.center),
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(200, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
+        loading: () => const Center(
+          child: SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(
+              color: AppTheme.primary,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+        error: (_, _) => const SizedBox.shrink(),
       ),
     );
   }

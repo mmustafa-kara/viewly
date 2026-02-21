@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/navigation_provider.dart';
 import 'home/home_screen.dart';
@@ -15,13 +14,12 @@ class MainWrapper extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     // MainWrapper is only reachable when authenticated, so currentUser is guaranteed non-null.
-    final user = FirebaseAuth.instance.currentUser!;
 
     // Define screens
     final List<Widget> screens = [
       const HomeScreen(),
       const GlobalDiscussionsScreen(),
-      ProfileScreen(userId: user.uid),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -31,6 +29,7 @@ class MainWrapper extends ConsumerWidget {
           color: AppTheme.surface,
           boxShadow: [
             BoxShadow(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(0.2),
               blurRadius: 8,
               offset: const Offset(0, -2),

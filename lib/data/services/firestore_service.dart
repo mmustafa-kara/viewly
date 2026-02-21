@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 import '../models/user_model.dart';
 import '../models/movie_model.dart';
 import '../models/comment_model.dart';
@@ -44,6 +45,31 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Profil güncellenemedi: $e');
     }
+  }
+
+  /// Search users by username (starts with)
+  Future<List<UserModel>> searchUsers(
+    String query,
+    String currentUserId,
+  ) async {
+    if (query.isEmpty) return [];
+
+    // Firestore "starts with" query
+    final snapshot = await _usersCollection
+        .where('username', isGreaterThanOrEqualTo: query)
+        .where('username', isLessThanOrEqualTo: '$query\uf8ff')
+        .limit(20)
+        .get();
+
+    return snapshot.docs
+        .where((doc) => doc.id != currentUserId) // Exclude current user
+        .map(
+          (doc) => UserModel.fromFirestore(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+          ),
+        )
+        .toList();
   }
 
   /// Create a new post
@@ -274,4 +300,251 @@ class FirestoreService {
               .toList();
         });
   }
+  // ========== FRIENDSHIP SYSTEM ==========
+
+  /// Get the number of friends for a user
+  Stream<int> getFriendCount(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .collection('friends')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get a list of friends (UserModel) for a user
+  Stream<List<UserModel>> getFriends(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .collection('friends')
+        .snapshots()
+        .asyncMap((snapshot) async {
+          if (snapshot.docs.isEmpty) return [];
+
+          final friendFutures = snapshot.docs.map((doc) async {
+            final friendId = doc.id;
+            final userDoc = await _usersCollection.doc(friendId).get();
+            if (userDoc.exists) {
+              return UserModel.fromFirestore(
+                userDoc.data() as Map<String, dynamic>,
+                userDoc.id,
+              );
+            }
+            return null; // Return null if user data not found
+          });
+
+          final friendModels = await Future.wait(friendFutures);
+          // Filter out nulls and return the list of valid friends
+          return friendModels.whereType<UserModel>().toList();
+        });
+  }
+
+  /// Get Friendship Status between two users
+  Stream<FriendshipStatus> getFriendshipStatus(
+    String currentUserId,
+    String targetUserId,
+  ) {
+    final currentUserDocRef = _usersCollection.doc(currentUserId);
+
+    // Stream to check if they are already friends
+    final isFriendsStream = currentUserDocRef
+        .collection('friends')
+        .doc(targetUserId)
+        .snapshots()
+        .map((doc) => doc.exists);
+
+    // Stream to check if current user sent a request to target user
+    final isRequestSentStream = currentUserDocRef
+        .collection('sent_requests')
+        .doc(targetUserId)
+        .snapshots()
+        .map((doc) => doc.exists);
+
+    // Stream to check if current user received a request from target user
+    final isRequestReceivedStream = currentUserDocRef
+        .collection('received_requests')
+        .doc(targetUserId)
+        .snapshots()
+        .map((doc) => doc.exists);
+
+    return Rx.combineLatest3(
+      isFriendsStream,
+      isRequestSentStream,
+      isRequestReceivedStream,
+      (bool isFriends, bool isRequestSent, bool isRequestReceived) {
+        if (isFriends) {
+          return FriendshipStatus.friends;
+        } else if (isRequestSent) {
+          return FriendshipStatus.requestSent;
+        } else if (isRequestReceived) {
+          return FriendshipStatus.requestReceived;
+        } else {
+          return FriendshipStatus.notFriends;
+        }
+      },
+    );
+  }
+
+  /// Send Friend Request
+  Future<void> sendFriendRequest(
+    String currentUserId,
+    String targetUserId,
+  ) async {
+    final batch = _firestore.batch();
+
+    final currentUserSentRef = _usersCollection
+        .doc(currentUserId)
+        .collection('sent_requests')
+        .doc(targetUserId);
+
+    final targetUserReceivedRef = _usersCollection
+        .doc(targetUserId)
+        .collection('received_requests')
+        .doc(currentUserId);
+
+    batch.set(currentUserSentRef, {'timestamp': FieldValue.serverTimestamp()});
+    batch.set(targetUserReceivedRef, {
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  /// Cancel or Reject Friend Request
+  Future<void> cancelFriendRequest(
+    String currentUserId,
+    String targetUserId,
+  ) async {
+    final batch = _firestore.batch();
+
+    final currentUserSentRef = _usersCollection
+        .doc(currentUserId)
+        .collection('sent_requests')
+        .doc(targetUserId);
+
+    final targetUserReceivedRef = _usersCollection
+        .doc(targetUserId)
+        .collection('received_requests')
+        .doc(currentUserId);
+
+    final currentUserReceivedRef = _usersCollection
+        .doc(currentUserId)
+        .collection('received_requests')
+        .doc(targetUserId);
+
+    final targetUserSentRef = _usersCollection
+        .doc(targetUserId)
+        .collection('sent_requests')
+        .doc(currentUserId);
+
+    // Try deleting all possible combinations to handle both cancel and reject scenarios using one method safely
+    batch.delete(currentUserSentRef);
+    batch.delete(targetUserReceivedRef);
+    batch.delete(currentUserReceivedRef);
+    batch.delete(targetUserSentRef);
+
+    await batch.commit();
+  }
+
+  /// Get Incoming Friend Requests
+  Stream<List<UserModel>> getIncomingRequests(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .collection('received_requests')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          // Simulate network delay for modern UI loading state
+          await Future.delayed(const Duration(milliseconds: 600));
+
+          if (snapshot.docs.isEmpty) return [];
+
+          final requestFutures = snapshot.docs.map((doc) async {
+            final requesterId = doc.id;
+            final userDoc = await _usersCollection.doc(requesterId).get();
+            if (userDoc.exists) {
+              return UserModel.fromFirestore(
+                userDoc.data() as Map<String, dynamic>,
+                userDoc.id,
+              );
+            }
+            return null;
+          });
+
+          final requestModels = await Future.wait(requestFutures);
+          return requestModels.whereType<UserModel>().toList();
+        });
+  }
+
+  /// Accept Friend Request
+  Future<void> acceptFriendRequest(
+    String currentUserId,
+    String targetUserId,
+  ) async {
+    final batch = _firestore.batch();
+
+    // 1. Add targetUserId to currentUserId's friends
+    final currentFriendsRef = _usersCollection
+        .doc(currentUserId)
+        .collection('friends')
+        .doc(targetUserId);
+    batch.set(currentFriendsRef, {'addedAt': FieldValue.serverTimestamp()});
+
+    // 2. Add currentUserId to targetUserId's friends
+    final targetFriendsRef = _usersCollection
+        .doc(targetUserId)
+        .collection('friends')
+        .doc(currentUserId);
+    batch.set(targetFriendsRef, {'addedAt': FieldValue.serverTimestamp()});
+
+    // 3. Remove from currentUserId's received_requests
+    final currentUserReceivedRef = _usersCollection
+        .doc(currentUserId)
+        .collection('received_requests')
+        .doc(targetUserId);
+    batch.delete(currentUserReceivedRef);
+
+    // 4. Remove from targetUserId's sent_requests
+    final targetUserSentRef = _usersCollection
+        .doc(targetUserId)
+        .collection('sent_requests')
+        .doc(currentUserId);
+    batch.delete(targetUserSentRef);
+
+    // Also remove any reverse requests just in case
+    final currentUserSentRef = _usersCollection
+        .doc(currentUserId)
+        .collection('sent_requests')
+        .doc(targetUserId);
+    batch.delete(currentUserSentRef);
+
+    final targetUserReceivedRef = _usersCollection
+        .doc(targetUserId)
+        .collection('received_requests')
+        .doc(currentUserId);
+    batch.delete(targetUserReceivedRef);
+
+    await batch.commit();
+  }
+
+  /// Remove Friend
+  Future<void> removeFriend(String currentUserId, String targetUserId) async {
+    final batch = _firestore.batch();
+
+    final currentToTargetRef = _usersCollection
+        .doc(currentUserId)
+        .collection('friends')
+        .doc(targetUserId);
+
+    final targetToCurrentRef = _usersCollection
+        .doc(targetUserId)
+        .collection('friends')
+        .doc(currentUserId);
+
+    batch.delete(currentToTargetRef);
+    batch.delete(targetToCurrentRef);
+
+    await batch.commit();
+  }
 }
+
+enum FriendshipStatus { notFriends, requestSent, requestReceived, friends }

@@ -27,6 +27,7 @@ class MovieDetailScreen extends ConsumerWidget {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
+                  // ignore: deprecated_member_use
                   color: Colors.black.withOpacity(0.5),
                   shape: BoxShape.circle,
                 ),
@@ -39,6 +40,7 @@ class MovieDetailScreen extends ConsumerWidget {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
                     color: Colors.black.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
@@ -77,6 +79,7 @@ class MovieDetailScreen extends ConsumerWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
+                          // ignore: deprecated_member_use
                           AppTheme.background.withOpacity(0.7),
                           AppTheme.background,
                         ],
@@ -122,6 +125,7 @@ class MovieDetailScreen extends ConsumerWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
+                          // ignore: deprecated_member_use
                           color: AppTheme.primary.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -385,6 +389,7 @@ class MovieDetailScreen extends ConsumerWidget {
                         content: content,
                       );
 
+                      // ignore: use_build_context_synchronously
                       Navigator.pop(modalContext);
 
                       if (context.mounted) {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/user_model.dart';
 import '../data/models/movie_model.dart';
+import '../data/services/firestore_service.dart';
 import 'providers.dart';
 
 /// User Profile Provider
@@ -44,3 +45,59 @@ final moviePostsProvider = StreamProvider.family((ref, String movieId) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getMoviePosts(movieId);
 });
+
+// ========== FRIENDSHIP PROVIDERS ==========
+
+/// Friend Count Provider
+final friendCountProvider = StreamProvider.family<int, String>((
+  ref,
+  String userId,
+) {
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return firestoreService.getFriendCount(userId);
+});
+
+/// Friends List Provider
+final friendsListProvider = StreamProvider.family<List<UserModel>, String>((
+  ref,
+  String userId,
+) {
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return firestoreService.getFriends(userId);
+});
+
+/// Incoming Requests Provider
+final incomingRequestsProvider = StreamProvider.family<List<UserModel>, String>(
+  (ref, String userId) {
+    final firestoreService = ref.watch(firestoreServiceProvider);
+    return firestoreService.getIncomingRequests(userId);
+  },
+);
+
+class FriendshipArgs {
+  final String currentUserId;
+  final String targetUserId;
+
+  FriendshipArgs({required this.currentUserId, required this.targetUserId});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FriendshipArgs &&
+          runtimeType == other.runtimeType &&
+          currentUserId == other.currentUserId &&
+          targetUserId == other.targetUserId;
+
+  @override
+  int get hashCode => currentUserId.hashCode ^ targetUserId.hashCode;
+}
+
+/// Friendship Status Provider
+final friendshipStatusProvider =
+    StreamProvider.family<FriendshipStatus, FriendshipArgs>((ref, args) {
+      final firestoreService = ref.watch(firestoreServiceProvider);
+      return firestoreService.getFriendshipStatus(
+        args.currentUserId,
+        args.targetUserId,
+      );
+    });

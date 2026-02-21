@@ -290,7 +290,8 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ProfileScreen(userId: userId),
+                                builder: (_) =>
+                                    ProfileScreen(visitedUserId: userId),
                               ),
                             );
                           }

@@ -138,7 +138,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ProfileScreen(userId: widget.userId),
+                          builder: (_) =>
+                              ProfileScreen(visitedUserId: widget.userId),
                         ),
                       );
                     }

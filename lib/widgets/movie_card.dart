@@ -29,6 +29,7 @@ class MovieCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
@@ -83,6 +84,7 @@ class MovieCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
+                    // ignore: deprecated_member_use
                     colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                     stops: const [0.5, 1.0],
                   ),
@@ -99,6 +101,7 @@ class MovieCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
                   ),
