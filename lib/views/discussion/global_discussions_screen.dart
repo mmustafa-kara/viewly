@@ -9,6 +9,7 @@ import '../profile/profile_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import 'create_post_bottom_sheet.dart';
 import 'post_detail_screen.dart';
+import '../../data/models/post_model.dart';
 
 /// Filtered discussions provider — rebuilds when filter state changes
 final filteredDiscussionsProvider = StreamProvider.autoDispose((ref) {
@@ -245,63 +246,28 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                     itemCount: posts.length,
                     itemBuilder: (context, index) {
                       final doc = posts[index];
-                      final post = doc.data() as Map<String, dynamic>;
-                      final postId = doc.id;
-
-                      final userId = post['userId'] as String? ?? '';
-                      final authorUsername =
-                          post['authorUsername'] as String? ?? '';
-                      final movieId = post['movieId'] as String? ?? '';
-                      final movieTitle =
-                          post['movieTitle'] as String? ?? 'Film';
-                      final content = post['content'] as String? ?? '';
-                      final likesCount = post['likes'] as int? ?? 0;
-                      final commentsCount = post['comments'] as int? ?? 0;
-                      final likedBy = List<String>.from(post['likedBy'] ?? []);
-                      final isLiked =
-                          currentUserId != null &&
-                          likedBy.contains(currentUserId);
-
-                      final timestamp = post['createdAt'];
-                      final createdAt = timestamp != null
-                          ? timestamp.toDate() as DateTime
-                          : null;
+                      final post = PostModel.fromFirestore(doc);
 
                       return DiscussionCard(
-                        postId: postId,
-                        userId: userId,
-                        authorUsername: authorUsername.isNotEmpty
-                            ? authorUsername
-                            : userId.isNotEmpty
-                            ? userId.substring(
-                                0,
-                                userId.length > 6 ? 6 : userId.length,
-                              )
-                            : 'anonim',
-                        movieId: movieId,
-                        movieTitle: movieTitle,
-                        content: content,
-                        likesCount: likesCount,
-                        commentsCount: commentsCount,
-                        isLiked: isLiked,
-                        createdAt: createdAt,
+                        post: post,
+                        currentUserId: currentUserId,
                         onUsernameTap: () {
-                          if (userId.isNotEmpty) {
+                          if (post.userId.isNotEmpty) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ProfileScreen(visitedUserId: userId),
+                                    ProfileScreen(visitedUserId: post.userId),
                               ),
                             );
                           }
                         },
                         onMovieTitleTap: () async {
-                          if (movieId.isNotEmpty) {
+                          if (post.movieId.isNotEmpty) {
                             try {
                               final tmdbService = ref.read(tmdbServiceProvider);
                               final movieData = await tmdbService
-                                  .getMovieDetails(int.parse(movieId));
+                                  .getMovieDetails(int.parse(post.movieId));
                               if (context.mounted) {
                                 Navigator.push(
                                   context,
@@ -318,20 +284,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => PostDetailScreen(
-                                postId: postId,
-                                userId: userId,
-                                authorUsername: authorUsername.isNotEmpty
-                                    ? authorUsername
-                                    : 'anonim',
-                                movieId: movieId,
-                                movieTitle: movieTitle,
-                                content: content,
-                                likesCount: likesCount,
-                                commentsCount: commentsCount,
-                                isLiked: isLiked,
-                                createdAt: createdAt,
-                              ),
+                              builder: (_) => PostDetailScreen(post: post),
                             ),
                           );
                         },
@@ -341,7 +294,7 @@ class GlobalDiscussionsScreen extends ConsumerWidget {
                             firestoreServiceProvider,
                           );
                           await firestoreService.toggleLike(
-                            postId,
+                            post.id,
                             currentUserId,
                           );
                         },

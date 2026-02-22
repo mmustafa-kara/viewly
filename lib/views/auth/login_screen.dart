@@ -95,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   // Title
                   Text(
-                    'CineTalk',
+                    'Viewly',
                     style: Theme.of(context).textTheme.displayLarge,
                   ),
                   const SizedBox(height: 8),
@@ -417,7 +417,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _showInfoSheet(
                             context,
                             'Kullanım Koşulları',
-                            'CineTalk platformunda küfür, hakaret ve spoiler içeren paylaşımlar yapmak yasaktır. Kurallara uymayan hesaplar kalıcı olarak silinebilir.',
+                            'Viewly platformunda küfür, hakaret ve spoiler içeren paylaşımlar yapmak yasaktır. Kurallara uymayan hesaplar kalıcı olarak silinebilir.',
                           );
                         },
                         child: const Text(
@@ -437,7 +437,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _showInfoSheet(
                             context,
                             'Gizlilik Politikası (KVKK)',
-                            'CineTalk, kişisel verilerinizi (e-posta, kullanıcı adı) 6698 sayılı KVKK kapsamında yalnızca uygulama içi kimlik doğrulama ve hizmet sunumu amacıyla saklar. Verileriniz 3. şahıslarla paylaşılmaz. İstediğiniz zaman profil ayarlarından hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.',
+                            'Viewly, kişisel verilerinizi (e-posta, kullanıcı adı) 6698 sayılı KVKK kapsamında yalnızca uygulama içi kimlik doğrulama ve hizmet sunumu amacıyla saklar. Verileriniz 3. şahıslarla paylaşılmaz. İstediğiniz zaman profil ayarlarından hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.',
                           );
                         },
                         child: const Text(
@@ -457,7 +457,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _showInfoSheet(
                             context,
                             'Yardım & Destek',
-                            'Uygulama ile ilgili yaşadığınız teknik sorunlar, görüş ve önerileriniz için support@cinetalk.com adresinden bizimle iletişime geçebilirsiniz.',
+                            'Uygulama ile ilgili yaşadığınız teknik sorunlar, görüş ve önerileriniz için support@viewly.com adresinden bizimle iletişime geçebilirsiniz.',
                           );
                         },
                         child: const Text(

@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/theme.dart';
+import '../../core/app_strings.dart';
 import '../../data/services/firestore_service.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../viewmodels/providers.dart';
-import '../../widgets/movie_card.dart';
 import '../../widgets/discussion_card.dart';
 import '../main_wrapper.dart';
 import '../auth/login_screen.dart';
 import '../detail/movie_detail_screen.dart';
 import '../discussion/post_detail_screen.dart';
+import '../../data/models/post_model.dart';
 import 'friends_screen.dart';
 import 'user_search_screen.dart';
 import 'friend_requests_screen.dart';
+import 'widgets/user_posts_tab.dart';
+import 'widgets/user_comments_tab.dart';
+import 'widgets/saved_movies_tab.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String? visitedUserId;
@@ -50,19 +53,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: const Text(AppStrings.profileTitle),
         leading: _isRootTab
             ? null
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
-                tooltip: 'Geri',
+                tooltip: AppStrings.backTooltip,
                 onPressed: () => Navigator.pop(context),
               ),
         actions: [
           if (!_isRootTab)
             IconButton(
               icon: const Icon(Icons.home_outlined),
-              tooltip: 'Ana Sayfa',
+              tooltip: AppStrings.homeTooltip,
               onPressed: () {
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const MainWrapper()),
@@ -84,7 +87,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.notifications),
-                          tooltip: 'Gelen İstekler',
+                          tooltip: AppStrings.friendRequestsTooltip,
                           onPressed: () {
                             Navigator.push(
                               context,
@@ -168,26 +171,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      title: const Row(
+                      title: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.warning_amber_rounded,
                             color: Colors.red,
                             size: 28,
                           ),
-                          SizedBox(width: 12),
-                          Text('Hesabı Sil'),
+                          const SizedBox(width: 12),
+                          Text(AppStrings.deleteAccountTitle),
                         ],
                       ),
-                      content: const Text(
-                        'Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz tamamen silinir.',
-                        style: TextStyle(fontSize: 15, height: 1.4),
+                      content: Text(
+                        AppStrings.deleteAccountWarning,
+                        style: const TextStyle(fontSize: 15, height: 1.4),
                       ),
                       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('İptal'),
+                          child: Text(AppStrings.cancelButton),
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
@@ -239,7 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               }
                             }
                           },
-                          child: const Text('Sil'),
+                          child: Text(AppStrings.deleteButton),
                         ),
                       ],
                     ),
@@ -247,23 +250,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout, size: 20),
-                      SizedBox(width: 12),
-                      Text('Çıkış Yap'),
+                      const Icon(Icons.logout, size: 20),
+                      const SizedBox(width: 12),
+                      Text(AppStrings.logoutButton),
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_forever, size: 20, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('Hesabı Sil', style: TextStyle(color: Colors.red)),
+                      const Icon(
+                        Icons.delete_forever,
+                        size: 20,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        AppStrings.deleteAccountButton,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ],
                   ),
                 ),
@@ -275,10 +285,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: userProfile.when(
         data: (user) {
           if (user == null) {
-            return const Center(
+            return Center(
               child: Text(
-                'Kullanıcı bulunamadı',
-                style: TextStyle(color: AppTheme.textHint),
+                AppStrings.userNotFound,
+                style: const TextStyle(color: AppTheme.textHint),
               ),
             );
           }
@@ -370,9 +380,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             vertical: 4.0,
                           ),
                           child: _StatItem(
-                            label: 'ARKADAŞLAR',
+                            label: AppStrings.friendsCount,
                             value: friendCountAsync.when(
-                              // ignore: avoid_types_as_parameter_names
+                              // ignore: avoid_types_as_parameter_types
                               data: (count) => _formatNumber(count),
                               loading: () => '...',
                               error: (_, _) => '-',
@@ -383,10 +393,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Container(
                         width: 1,
                         height: 40,
-                        color: AppTheme.textHint.withValues(alpha: 0.2),
+                        // ignore: deprecated_member_use
+                        color: AppTheme.textHint.withOpacity(0.2),
                       ),
                       _StatItem(
-                        label: 'TARTIŞMALAR',
+                        label: AppStrings.discussionsCount,
                         value: _formatNumber(user.postsCount),
                       ),
                     ],
@@ -402,8 +413,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ? Center(
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.person_search),
-                              label: const Text(
-                                'Arkadaş Bul',
+                              label: Text(
+                                AppStrings.findFriendsBtn,
                                 textAlign: TextAlign.center,
                               ),
                               onPressed: () {
@@ -449,23 +460,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           _TabButton(
                             label: _isOwner
-                                ? 'Geçmiş\nTartışmalarım'
-                                : 'Tartışmalar',
+                                ? AppStrings.myDiscussionsTab
+                                : AppStrings.tabDiscussions,
                             isActive: _selectedTabIndex == 0,
                             onTap: () => setState(() => _selectedTabIndex = 0),
                           ),
                           _TabButton(
-                            label: 'Kaydedilenler',
+                            label: AppStrings.tabSaved,
                             isActive: _selectedTabIndex == 1,
                             onTap: () => setState(() => _selectedTabIndex = 1),
                           ),
                           _TabButton(
-                            label: 'Beğenilenler',
+                            label: AppStrings.tabLiked,
                             isActive: _selectedTabIndex == 2,
                             onTap: () => setState(() => _selectedTabIndex = 2),
                           ),
                           _TabButton(
-                            label: 'Yorumlarım',
+                            label: AppStrings.tabComments,
                             isActive: _selectedTabIndex == 3,
                             onTap: () => setState(() => _selectedTabIndex = 3),
                           ),
@@ -476,17 +487,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                     // ===== Tab Content =====
                     if (_selectedTabIndex == 0)
-                      _buildUserPostsTab(
-                        userPosts,
-                        user.displayUsername,
-                        currentUserId,
+                      UserPostsTab(
+                        userPosts: userPosts,
+                        displayUsername: user.displayUsername,
+                        currentUserId: currentUserId,
+                        effectiveUserId: _effectiveUserId,
                       )
                     else if (_selectedTabIndex == 1)
-                      _buildSavedMoviesTab(savedMovies)
+                      SavedMoviesTab(savedMovies: savedMovies)
                     else if (_selectedTabIndex == 2)
                       _buildLikedPostsTab(likedPosts, currentUserId)
                     else
-                      _buildUserCommentsTab(currentUserId!),
+                      UserCommentsTab(userId: _effectiveUserId),
                   ],
                 ),
               ],
@@ -503,420 +515,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const Icon(Icons.error_outline, color: AppTheme.error, size: 48),
               const SizedBox(height: 16),
               Text(
-                'Hata: $error',
+                '${AppStrings.loadingError} $error',
                 style: const TextStyle(color: AppTheme.error),
                 textAlign: TextAlign.center,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserCommentsTab(String userId) {
-    if (userId.isEmpty) return const SizedBox.shrink();
-
-    return Consumer(
-      builder: (context, ref, _) {
-        final commentsAsync = ref.watch(userCommentsProvider(userId));
-
-        return commentsAsync.when(
-          data: (comments) {
-            if (comments.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.comment_outlined,
-                        size: 48,
-                        color: AppTheme.textHint,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Henüz hiç yorum yapmadınız.',
-                        style: TextStyle(
-                          color: AppTheme.textHint,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: comments.length,
-              itemBuilder: (context, index) {
-                final comment = comments[index];
-
-                String dateStr = '';
-                try {
-                  final now = DateTime.now();
-                  final diff = now.difference(comment.createdAt);
-                  if (diff.inMinutes < 1) {
-                    dateStr = 'az önce';
-                  } else if (diff.inMinutes < 60)
-                    // ignore: curly_braces_in_flow_control_structures
-                    dateStr = '${diff.inMinutes}dk';
-                  else if (diff.inHours < 24)
-                    // ignore: curly_braces_in_flow_control_structures
-                    dateStr = '${diff.inHours}sa';
-                  else if (diff.inDays < 7)
-                    // ignore: curly_braces_in_flow_control_structures
-                    dateStr = '${diff.inDays}g';
-                  else
-                    // ignore: curly_braces_in_flow_control_structures
-                    dateStr =
-                        '${comment.createdAt.day}/${comment.createdAt.month}/${comment.createdAt.year}';
-                } catch (_) {}
-
-                return Card(
-                  color: AppTheme.surface,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    onTap: () async {
-                      if (comment.postId == null) return;
-
-                      // Show loading dialog
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext c) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        },
-                      );
-
-                      try {
-                        final firestoreService = ref.read(
-                          firestoreServiceProvider,
-                        );
-                        final postData = await firestoreService.getPostById(
-                          comment.postId!,
-                        );
-
-                        if (context.mounted) {
-                          Navigator.pop(context); // Close loading dialog
-
-                          if (postData != null) {
-                            final postId = postData['id'] as String;
-                            final postUserId =
-                                postData['userId'] as String? ?? '';
-                            final postAuthorUsername =
-                                postData['authorUsername'] as String? ?? '';
-                            final movieId =
-                                postData['movieId'] as String? ?? '';
-                            final movieTitle =
-                                postData['movieTitle'] as String? ?? '';
-                            final content =
-                                postData['content'] as String? ?? '';
-                            final likesCount = postData['likes'] as int? ?? 0;
-                            final commentsCount =
-                                postData['comments'] as int? ?? 0;
-                            final likedBy = List<String>.from(
-                              postData['likedBy'] ?? [],
-                            );
-                            final isLiked =
-                                userId.isNotEmpty && likedBy.contains(userId);
-                            final timestamp = postData['createdAt'];
-                            final createdAt = timestamp != null
-                                ? (timestamp as Timestamp).toDate()
-                                : null;
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PostDetailScreen(
-                                  postId: postId,
-                                  userId: postUserId,
-                                  authorUsername: postAuthorUsername,
-                                  movieId: movieId,
-                                  movieTitle: movieTitle,
-                                  content: content,
-                                  likesCount: likesCount,
-                                  commentsCount: commentsCount,
-                                  isLiked: isLiked,
-                                  createdAt: createdAt,
-                                ),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Bu tartışma silinmiş veya artık mevcut değil.',
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          Navigator.pop(context); // Close loading dialog
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Tartışmaya gidilirken bir hata oluştu.',
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    leading: const Icon(
-                      Icons.comment_rounded,
-                      color: AppTheme.primary,
-                      size: 24,
-                    ),
-                    title: Text(
-                      comment.content,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        dateStr,
-                        style: const TextStyle(
-                          color: AppTheme.textHint,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
-            ),
-          ),
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            child: Center(
-              child: Text(
-                'Yorumlar yüklenirken bir hata oluştu.',
-                style: const TextStyle(color: AppTheme.error),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ===== Tab 1: User Posts =====
-  Widget _buildUserPostsTab(
-    AsyncValue userPosts,
-    String displayUsername,
-    String? currentUserId,
-  ) {
-    return userPosts.when(
-      data: (snapshot) {
-        final posts = snapshot.docs;
-        if (posts.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(32),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.chat_bubble_outline,
-                  size: 64,
-                  color: AppTheme.textHint,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Henüz tartışma yok',
-                  style: TextStyle(color: AppTheme.textHint),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final doc = posts[index];
-            final post = doc.data() as Map<String, dynamic>;
-            final postId = doc.id;
-            final authorUsername = post['authorUsername'] as String? ?? '';
-            final movieId = post['movieId'] as String? ?? '';
-            final movieTitle = post['movieTitle'] as String? ?? 'Film';
-            final content = post['content'] as String? ?? '';
-            final likesCount = post['likes'] as int? ?? 0;
-            final commentsCount = post['comments'] as int? ?? 0;
-            final likedBy = List<String>.from(post['likedBy'] ?? []);
-            final isLiked =
-                currentUserId != null && likedBy.contains(currentUserId);
-            final timestamp = post['createdAt'];
-            final createdAt = timestamp != null
-                ? timestamp.toDate() as DateTime
-                : null;
-
-            return DiscussionCard(
-              postId: postId,
-              userId: _effectiveUserId,
-              authorUsername: authorUsername.isNotEmpty
-                  ? authorUsername
-                  : displayUsername,
-              movieId: movieId,
-              movieTitle: movieTitle,
-              content: content,
-              likesCount: likesCount,
-              commentsCount: commentsCount,
-              isLiked: isLiked,
-              createdAt: createdAt,
-              onUsernameTap: () {},
-              onMovieTitleTap: () async {
-                if (movieId.isNotEmpty) {
-                  try {
-                    final tmdbService = ref.read(tmdbServiceProvider);
-                    final movieData = await tmdbService.getMovieDetails(
-                      int.parse(movieId),
-                    );
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MovieDetailScreen(movie: movieData),
-                        ),
-                      );
-                    }
-                  } catch (_) {}
-                }
-              },
-              onCardTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PostDetailScreen(
-                      postId: postId,
-                      userId: _effectiveUserId,
-                      authorUsername: authorUsername.isNotEmpty
-                          ? authorUsername
-                          : displayUsername,
-                      movieId: movieId,
-                      movieTitle: movieTitle,
-                      content: content,
-                      likesCount: likesCount,
-                      commentsCount: commentsCount,
-                      isLiked: isLiked,
-                      createdAt: createdAt,
-                    ),
-                  ),
-                );
-              },
-              onLikeTap: () async {
-                if (currentUserId == null) return;
-                final firestoreService = ref.read(firestoreServiceProvider);
-                await firestoreService.toggleLike(postId, currentUserId);
-              },
-            );
-          },
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(
-          child: CircularProgressIndicator(color: AppTheme.primary),
-        ),
-      ),
-      error: (error, stack) => Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            'Hata: $error',
-            style: const TextStyle(color: AppTheme.error),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ===== Tab 2: Saved Movies =====
-  Widget _buildSavedMoviesTab(AsyncValue savedMovies) {
-    return savedMovies.when(
-      data: (movies) {
-        if (movies.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(32),
-            child: Column(
-              children: [
-                Icon(Icons.bookmark_border, size: 64, color: AppTheme.textHint),
-                SizedBox(height: 16),
-                Text(
-                  'Henüz kaydedilen film yok',
-                  style: TextStyle(color: AppTheme.textHint),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.65,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: movies.length,
-          itemBuilder: (context, index) {
-            return MovieCard(
-              movie: movies[index],
-              width: double.infinity,
-              height: double.infinity,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MovieDetailScreen(movie: movies[index]),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(
-          child: CircularProgressIndicator(color: AppTheme.primary),
-        ),
-      ),
-      error: (error, stack) => Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            'Hata: $error',
-            style: const TextStyle(color: AppTheme.error),
           ),
         ),
       ),
@@ -936,7 +539,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Icon(Icons.favorite_border, size: 64, color: AppTheme.textHint),
                 SizedBox(height: 16),
                 Text(
-                  'Henüz beğenilen tartışma yok',
+                  AppStrings.emptyLiked,
                   style: TextStyle(color: AppTheme.textHint),
                 ),
               ],
@@ -951,52 +554,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final doc = posts[index];
-            final post = doc.data() as Map<String, dynamic>;
-            final postId = doc.id;
-            final postUserId = post['userId'] as String? ?? '';
-            final authorUsername = post['authorUsername'] as String? ?? '';
-            final movieId = post['movieId'] as String? ?? '';
-            final movieTitle = post['movieTitle'] as String? ?? 'Film';
-            final content = post['content'] as String? ?? '';
-            final likesCount = post['likes'] as int? ?? 0;
-            final commentsCount = post['comments'] as int? ?? 0;
-            final likedBy = List<String>.from(post['likedBy'] ?? []);
-            final isLiked =
-                currentUserId != null && likedBy.contains(currentUserId);
-            final timestamp = post['createdAt'];
-            final createdAt = timestamp != null
-                ? timestamp.toDate() as DateTime
-                : null;
+            final post = PostModel.fromFirestore(doc);
 
             return DiscussionCard(
-              postId: postId,
-              userId: postUserId,
-              authorUsername: authorUsername.isNotEmpty
-                  ? authorUsername
-                  : 'anonim',
-              movieId: movieId,
-              movieTitle: movieTitle,
-              content: content,
-              likesCount: likesCount,
-              commentsCount: commentsCount,
-              isLiked: isLiked,
-              createdAt: createdAt,
+              post: post,
+              currentUserId: currentUserId,
               onUsernameTap: () {
-                if (postUserId.isNotEmpty && postUserId != _effectiveUserId) {
+                if (post.userId.isNotEmpty && post.userId != _effectiveUserId) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProfileScreen(visitedUserId: postUserId),
+                      builder: (_) => ProfileScreen(visitedUserId: post.userId),
                     ),
                   );
                 }
               },
               onMovieTitleTap: () async {
-                if (movieId.isNotEmpty) {
+                if (post.movieId.isNotEmpty) {
                   try {
                     final tmdbService = ref.read(tmdbServiceProvider);
                     final movieData = await tmdbService.getMovieDetails(
-                      int.parse(movieId),
+                      int.parse(post.movieId),
                     );
                     if (context.mounted) {
                       Navigator.push(
@@ -1013,27 +591,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PostDetailScreen(
-                      postId: postId,
-                      userId: postUserId,
-                      authorUsername: authorUsername.isNotEmpty
-                          ? authorUsername
-                          : 'anonim',
-                      movieId: movieId,
-                      movieTitle: movieTitle,
-                      content: content,
-                      likesCount: likesCount,
-                      commentsCount: commentsCount,
-                      isLiked: isLiked,
-                      createdAt: createdAt,
-                    ),
+                    builder: (_) => PostDetailScreen(post: post),
                   ),
                 );
               },
               onLikeTap: () async {
                 if (currentUserId == null) return;
                 final firestoreService = ref.read(firestoreServiceProvider);
-                await firestoreService.toggleLike(postId, currentUserId);
+                await firestoreService.toggleLike(post.id, currentUserId);
               },
             );
           },

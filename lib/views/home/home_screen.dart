@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../core/app_strings.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/movie_card.dart';
 import '../../widgets/movie_list_tile.dart';
@@ -37,12 +38,12 @@ class HomeScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Keşfet',
+                      AppStrings.homeExploreTitle,
                       style: Theme.of(context).textTheme.displayMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Binlerce film ve tartışma seni bekliyor',
+                      AppStrings.homeExploreSubtitle,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -55,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: CustomSearchBar(
-                  hintText: 'Film veya dizi ara...',
+                  hintText: AppStrings.homeSearchHint,
                   readOnly: true,
                   onTap: () {
                     Navigator.push(
@@ -77,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'En Çok Konuşulan Filmler',
+                      AppStrings.homeTrendingMovies,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
@@ -91,7 +92,7 @@ class HomeScreen extends ConsumerWidget {
                         );
                       },
                       child: const Text(
-                        'Tümünü Gör',
+                        AppStrings.homeSeeAll,
                         style: TextStyle(color: AppTheme.secondary),
                       ),
                     ),
@@ -111,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
                     if (movies.isEmpty) {
                       return const Center(
                         child: Text(
-                          'Henüz film yok',
+                          AppStrings.homeEmptyMovies,
                           style: TextStyle(color: AppTheme.textHint),
                         ),
                       );
@@ -150,7 +151,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Hata: $error',
+                          '${AppStrings.errorPrefix} $error',
                           style: const TextStyle(color: AppTheme.error),
                           textAlign: TextAlign.center,
                         ),
@@ -171,7 +172,7 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Dikkat Çeken Diziler',
+                      AppStrings.homeTrendingTV,
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     TextButton(
@@ -185,7 +186,7 @@ class HomeScreen extends ConsumerWidget {
                         );
                       },
                       child: const Text(
-                        'Tümünü Gör',
+                        AppStrings.homeSeeAll,
                         style: TextStyle(color: AppTheme.secondary),
                       ),
                     ),
@@ -205,7 +206,7 @@ class HomeScreen extends ConsumerWidget {
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                          'Henüz dizi yok',
+                          AppStrings.homeEmptyTV,
                           style: TextStyle(color: AppTheme.textHint),
                         ),
                       ),
@@ -253,7 +254,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Hata: $error',
+                          '${AppStrings.errorPrefix} $error',
                           style: const TextStyle(color: AppTheme.error),
                           textAlign: TextAlign.center,
                         ),

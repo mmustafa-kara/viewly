@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme.dart';
 import '../../data/models/comment_model.dart';
+import '../../data/models/post_model.dart';
 import '../../viewmodels/providers.dart';
 import '../../widgets/discussion_card.dart';
 import '../profile/profile_screen.dart';
@@ -18,30 +19,9 @@ final commentsProvider = StreamProvider.family<List<CommentModel>, String>((
 });
 
 class PostDetailScreen extends ConsumerStatefulWidget {
-  final String postId;
-  final String userId;
-  final String authorUsername;
-  final String movieId;
-  final String movieTitle;
-  final String content;
-  final int likesCount;
-  final int commentsCount;
-  final bool isLiked;
-  final DateTime? createdAt;
+  final PostModel post;
 
-  const PostDetailScreen({
-    super.key,
-    required this.postId,
-    required this.userId,
-    required this.authorUsername,
-    required this.movieId,
-    required this.movieTitle,
-    required this.content,
-    required this.likesCount,
-    required this.commentsCount,
-    required this.isLiked,
-    this.createdAt,
-  });
+  const PostDetailScreen({super.key, required this.post});
 
   @override
   ConsumerState<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -80,7 +60,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         createdAt: DateTime.now(), // serverTimestamp used in toFirestore
       );
 
-      await firestoreService.addComment(widget.postId, comment);
+      await firestoreService.addComment(widget.post.id, comment);
 
       if (mounted) {
         _commentController.clear();
@@ -102,7 +82,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final comments = ref.watch(commentsProvider(widget.postId));
+    final comments = ref.watch(commentsProvider(widget.post.id));
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
@@ -122,34 +102,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               children: [
                 // Original post card (non-tappable)
                 DiscussionCard(
-                  postId: widget.postId,
-                  userId: widget.userId,
-                  authorUsername: widget.authorUsername,
-                  movieId: widget.movieId,
-                  movieTitle: widget.movieTitle,
-                  content: widget.content,
-                  likesCount: widget.likesCount,
-                  commentsCount: widget.commentsCount,
-                  isLiked: widget.isLiked,
-                  createdAt: widget.createdAt,
+                  post: widget.post,
+                  currentUserId: currentUserId,
                   onCardTap: null, // Don't navigate to self
                   onUsernameTap: () {
-                    if (widget.userId.isNotEmpty) {
+                    if (widget.post.userId.isNotEmpty) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              ProfileScreen(visitedUserId: widget.userId),
+                              ProfileScreen(visitedUserId: widget.post.userId),
                         ),
                       );
                     }
                   },
                   onMovieTitleTap: () async {
-                    if (widget.movieId.isNotEmpty) {
+                    if (widget.post.movieId.isNotEmpty) {
                       try {
                         final tmdbService = ref.read(tmdbServiceProvider);
                         final movieData = await tmdbService.getMovieDetails(
-                          int.parse(widget.movieId),
+                          int.parse(widget.post.movieId),
                         );
                         if (context.mounted) {
                           Navigator.push(
@@ -167,7 +139,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     if (currentUserId == null) return;
                     final firestoreService = ref.read(firestoreServiceProvider);
                     await firestoreService.toggleLike(
-                      widget.postId,
+                      widget.post.id,
                       currentUserId,
                     );
                   },
@@ -175,7 +147,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     if (currentUserId == null) return;
                     final firestoreService = ref.read(firestoreServiceProvider);
                     try {
-                      await firestoreService.deletePost(widget.postId);
+                      await firestoreService.deletePost(widget.post.id);
                       if (context.mounted) {
                         Navigator.pop(
                           context,
@@ -192,7 +164,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       }
                     }
                   },
-                  currentUserId: currentUserId,
                 ),
 
                 // Divider
@@ -255,7 +226,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             (comment) => _CommentTile(
                               comment: comment,
                               currentUserId: currentUserId ?? '',
-                              postId: widget.postId,
+                              postId: widget.post.id,
                             ),
                           )
                           .toList(),

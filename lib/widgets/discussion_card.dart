@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../data/models/post_model.dart';
 import '../core/theme.dart';
 
 /// A reusable discussion card widget with interactive elements.
 class DiscussionCard extends StatelessWidget {
-  final String postId;
-  final String userId;
-  final String authorUsername;
-  final String movieId;
-  final String movieTitle;
-  final String content;
-  final int likesCount;
-  final int commentsCount;
-  final bool isLiked;
-  final DateTime? createdAt;
+  final PostModel post;
   final VoidCallback? onUsernameTap;
   final VoidCallback? onMovieTitleTap;
   final VoidCallback? onCardTap;
@@ -23,16 +15,7 @@ class DiscussionCard extends StatelessWidget {
 
   const DiscussionCard({
     super.key,
-    required this.postId,
-    required this.userId,
-    required this.authorUsername,
-    required this.movieId,
-    required this.movieTitle,
-    required this.content,
-    required this.likesCount,
-    required this.commentsCount,
-    required this.isLiked,
-    this.createdAt,
+    required this.post,
     this.onUsernameTap,
     this.onMovieTitleTap,
     this.onCardTap,
@@ -43,8 +26,8 @@ class DiscussionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = createdAt != null
-        ? DateFormat('dd MMM yyyy').format(createdAt!)
+    final date = post.createdAt != null
+        ? DateFormat('dd MMM yyyy').format(post.createdAt!)
         : '';
 
     return InkWell(
@@ -68,8 +51,8 @@ class DiscussionCard extends StatelessWidget {
                   radius: 18,
                   backgroundColor: AppTheme.primary,
                   child: Text(
-                    authorUsername.isNotEmpty
-                        ? authorUsername[0].toUpperCase()
+                    post.authorUsername.isNotEmpty
+                        ? post.authorUsername[0].toUpperCase()
                         : 'U',
                     style: const TextStyle(
                       color: Colors.white,
@@ -86,7 +69,7 @@ class DiscussionCard extends StatelessWidget {
                       InkWell(
                         onTap: onUsernameTap,
                         child: Text(
-                          '@$authorUsername',
+                          '@${post.authorUsername}',
                           style: const TextStyle(
                             color: AppTheme.primary,
                             fontSize: 14,
@@ -108,7 +91,7 @@ class DiscussionCard extends StatelessWidget {
                             child: InkWell(
                               onTap: onMovieTitleTap,
                               child: Text(
-                                movieTitle,
+                                post.movieTitle,
                                 style: const TextStyle(
                                   color: AppTheme.secondary,
                                   fontSize: 13,
@@ -132,7 +115,7 @@ class DiscussionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (currentUserId == userId && onDeleteTap != null)
+                if (currentUserId == post.userId && onDeleteTap != null)
                   IconButton(
                     icon: const Icon(
                       Icons.delete_outline,
@@ -183,7 +166,7 @@ class DiscussionCard extends StatelessWidget {
 
             // Content
             Text(
-              content,
+              post.content,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 15,
@@ -210,15 +193,19 @@ class DiscussionCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          post.isLikedBy(currentUserId)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
                           size: 18,
-                          color: isLiked ? AppTheme.error : AppTheme.textHint,
+                          color: post.isLikedBy(currentUserId)
+                              ? AppTheme.error
+                              : AppTheme.textHint,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$likesCount',
+                          '${post.likesCount}',
                           style: TextStyle(
-                            color: isLiked
+                            color: post.isLikedBy(currentUserId)
                                 ? AppTheme.error
                                 : AppTheme.textPrimary,
                             fontSize: 14,
@@ -237,7 +224,7 @@ class DiscussionCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '$commentsCount',
+                  '${post.commentsCount}',
                   style: const TextStyle(
                     color: AppTheme.textHint,
                     fontSize: 14,

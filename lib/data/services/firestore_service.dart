@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 import '../models/user_model.dart';
 import '../models/movie_model.dart';
 import '../models/comment_model.dart';
+import '../models/post_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -111,14 +112,10 @@ class FirestoreService {
   }
 
   /// Get a single post data by its ID
-  Future<Map<String, dynamic>?> getPostById(String postId) async {
+  Future<PostModel?> getPostById(String postId) async {
     final doc = await _postsCollection.doc(postId).get();
-    if (!doc.exists || doc.data() == null) {
-      return null;
-    }
-    final data = doc.data() as Map<String, dynamic>;
-    data['id'] = doc.id; // Inject ID for navigation reference
-    return data;
+    if (!doc.exists) return null;
+    return PostModel.fromFirestore(doc);
   }
 
   /// Get posts from a specific user

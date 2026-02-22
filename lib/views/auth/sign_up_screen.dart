@@ -111,7 +111,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
                   // Subtitle
                   Text(
-                    'CineTalk topluluğuna katıl',
+                    'Viewly topluluğuna katıl',
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: AppTheme.secondary),

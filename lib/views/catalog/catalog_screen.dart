@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../core/app_strings.dart';
 import '../../viewmodels/catalog_provider.dart';
 import '../../widgets/movie_card.dart';
 import '../detail/movie_detail_screen.dart';
@@ -61,7 +62,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.mediaType == MediaType.movie ? 'Filmler' : 'Diziler',
+          widget.mediaType == MediaType.movie
+              ? AppStrings.catalogMoviesTitle
+              : AppStrings.catalogTVTitle,
         ),
       ),
       body: Column(
@@ -75,7 +78,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               child: Row(
                 children: [
                   _GenreChip(
-                    label: 'Tümü',
+                    label: AppStrings.catalogFilterAll,
                     isActive: selectedGenre == null,
                     onTap: () {
                       ref.read(selectedGenreProvider.notifier).state = null;
@@ -127,14 +130,14 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Hata: ${catalogState.errorMessage}',
+                          '${AppStrings.errorPrefix} ${catalogState.errorMessage}',
                           style: const TextStyle(color: AppTheme.error),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => notifier.refreshData(),
-                          child: const Text('Tekrar Dene'),
+                          child: const Text(AppStrings.catalogRetryBtn),
                         ),
                       ],
                     ),
@@ -152,8 +155,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         const SizedBox(height: 16),
                         Text(
                           widget.mediaType == MediaType.movie
-                              ? 'Film bulunamadı'
-                              : 'Dizi bulunamadı',
+                              ? AppStrings.catalogEmptyMovies
+                              : AppStrings.catalogEmptyTV,
                           style: const TextStyle(
                             color: AppTheme.textHint,
                             fontSize: 16,
