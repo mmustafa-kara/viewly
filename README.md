@@ -26,6 +26,7 @@
   <img src="assets/filmlerDetay.jpeg" width="15%">
   <img src="assets/dizilerDetay.jpeg" width="15%">
   <img src="assets/tartısmaAna.jpeg" width="15%">
+  <img src="assets/tartısmaDetay.jpeg" width="15%">
   <img src="assets/profilSayfasi.jpeg" width="15%">
 </p>
 
