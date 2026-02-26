@@ -22,9 +22,11 @@
 > **Not:** Uygulamanın GitHub'daki görünümünü zenginleştirmek için aşağıdaki placeholder (yer tutucu) resim linklerini kendi aldığın ekran görüntüsü linkleriyle değiştir. (Resimleri GitHub'da bir issue'ya sürükleyip bırakarak linklerini alabilirsin).
 
 <p align="center">
-  <img src="https://via.placeholder.com/250x500.png?text=Ana+Ekran" width="22%">
-  <img src="https://via.placeholder.com/250x500.png?text=Film+Detayi" width="22%">
-  <img src="https://via.placeholder.com/250x500.png?text=Tartismalar" width="22%">
+  <img src="assets/anaSayfa.jpeg" width="22%">
+  <img src="assets/filmdetay.jpeg" width="22%">
+  <img src="assets/diziDetay.jpeg" width="22%">
+  <img src="assets/tartisma.jpeg" width="22%">
+  <img src="https://via.placeholder.com/250x500.png?text=Kullanici+Profili" width="22%">
   <img src="https://via.placeholder.com/250x500.png?text=Kullanici+Profili" width="22%">
 </p>
 
