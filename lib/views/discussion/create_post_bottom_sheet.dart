@@ -423,8 +423,10 @@ class _CreatePostBottomSheetState extends ConsumerState<CreatePostBottomSheet> {
           // Share button
           SizedBox(
             width: double.infinity,
-            height: 50,
             child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               onPressed: _isPosting ? null : _handlePost,
               icon: _isPosting
                   ? const SizedBox(

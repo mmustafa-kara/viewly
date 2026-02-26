@@ -338,8 +338,10 @@ class MovieDetailScreen extends ConsumerWidget {
               // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                   onPressed: () async {
                     final content = textController.text.trim();
 

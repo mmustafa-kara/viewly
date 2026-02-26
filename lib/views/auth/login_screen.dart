@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme.dart';
 import '../../viewmodels/providers.dart';
 import '../main_wrapper.dart';
@@ -116,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'E-posta veya Kullanıcı Adı',
-                      hintText: 'kullanici@cine.talk veya kullanici_adi',
+                      hintText: 'kullanici@gmail.com veya kullanici_adi',
                       prefixIcon: Icon(
                         Icons.person_outline,
                         color: AppTheme.textHint,
@@ -413,13 +414,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       TextButton(
-                        onPressed: () {
-                          _showInfoSheet(
-                            context,
-                            'Kullanım Koşulları',
-                            'Viewly platformunda küfür, hakaret ve spoiler içeren paylaşımlar yapmak yasaktır. Kurallara uymayan hesaplar kalıcı olarak silinebilir.',
-                          );
-                        },
+                        onPressed: () => _showInfoBottomSheet(
+                          context,
+                          'Kullanım Koşulları',
+                          const TermsOfUseContent(),
+                        ),
                         child: const Text(
                           'Kullanım Koşulları',
                           style: TextStyle(
@@ -433,13 +432,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(color: AppTheme.textHint),
                       ),
                       TextButton(
-                        onPressed: () {
-                          _showInfoSheet(
-                            context,
-                            'Gizlilik Politikası (KVKK)',
-                            'Viewly, kişisel verilerinizi (e-posta, kullanıcı adı) 6698 sayılı KVKK kapsamında yalnızca uygulama içi kimlik doğrulama ve hizmet sunumu amacıyla saklar. Verileriniz 3. şahıslarla paylaşılmaz. İstediğiniz zaman profil ayarlarından hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.',
-                          );
-                        },
+                        onPressed: () => _showInfoBottomSheet(
+                          context,
+                          'Gizlilik Politikası',
+                          const PrivacyPolicyContent(),
+                        ),
                         child: const Text(
                           'Gizlilik Politikası',
                           style: TextStyle(
@@ -453,15 +450,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(color: AppTheme.textHint),
                       ),
                       TextButton(
-                        onPressed: () {
-                          _showInfoSheet(
-                            context,
-                            'Yardım & Destek',
-                            'Uygulama ile ilgili yaşadığınız teknik sorunlar, görüş ve önerileriniz için support@viewly.com adresinden bizimle iletişime geçebilirsiniz.',
-                          );
-                        },
+                        onPressed: () => _showInfoBottomSheet(
+                          context,
+                          'Hakkında',
+                          const AboutContent(),
+                        ),
                         child: const Text(
-                          'Yardım',
+                          'Hakkında',
                           style: TextStyle(
                             color: AppTheme.textHint,
                             fontSize: 12,
@@ -479,7 +474,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  void _showInfoSheet(BuildContext context, String title, String content) {
+  void _showInfoBottomSheet(
+    BuildContext context,
+    String title,
+    Widget content,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -489,7 +488,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -515,18 +519,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 16),
               // Content
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Text(
-                    content,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ),
+              Flexible(child: SingleChildScrollView(child: content)),
               const SizedBox(height: 24),
               // Close Button
               SizedBox(
@@ -565,6 +558,137 @@ class _SocialButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 32, color: AppTheme.textPrimary),
       ),
+    );
+  }
+}
+
+class TermsOfUseContent extends StatelessWidget {
+  const TermsOfUseContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Viewly platformuna hoş geldiniz. Uygulamamızı kullanarak aşağıdaki kullanım koşullarını kabul etmiş olursunuz. Viewly, sinemaseverlerin buluştuğu sosyal bir tartışma platformudur.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Kullanıcılar, platform üzerinde açtıkları tartışmalarda ve yaptıkları yorumlarda saygı çerçevesinde hareket etmek zorundadır. Nefret söylemi, hakaret, kişisel haklara saldırı veya aşırı spoiler içeren paylaşımlar yöneticiler tarafından uyarısız silinebilir.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Hesap güvenliğiniz tamamen sizin sorumluluğunuzdadır. Uygulama içerisindeki kuralları ihlal etmeniz durumunda hesabınız dondurulabilir veya kalıcı olarak kapatılabilir. Viewly, bu koşulları önceden haber vermeksizin güncelleme hakkını saklı tutar.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class PrivacyPolicyContent extends StatelessWidget {
+  const PrivacyPolicyContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Viewly, kullanıcılarının gizliliğine büyük önem vermektedir. Kişisel verileriniz (e-posta adresi, kullanıcı adı vb.) 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında işlenmekte ve güvenli bir şekilde saklanmaktadır.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Kullanıcı verileriniz Firebase altyapısı kullanılarak uluslararası standartlarda güvenli bir şekilde şifrelenip depolanmaktadır. Verileriniz, uygulamanın çekirdek işlevleri dışında hiçbir 3. şahıs kurum veya ticari yapıyla paylaşılmaz.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'İstediğiniz zaman profil sekmesinden hesabınızı silebilirsiniz. Hesap silme işleminin ardından, tarafınıza ait tüm kişisel kayıtlar, veritabanımızdan kalıcı olarak ve geri döndürülemez bir biçimde yok edilecektir.',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class AboutContent extends StatelessWidget {
+  const AboutContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Icon(Icons.movie, size: 50, color: Colors.blue),
+        const SizedBox(height: 16),
+        const Text(
+          'Viewly',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const Text(
+          'v1.0.0',
+          style: TextStyle(color: AppTheme.textHint, fontSize: 14),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.5,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: () async {
+            final url = Uri.parse('https://www.themoviedb.org/');
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              'https://www.themoviedb.org/',
+              style: TextStyle(color: AppTheme.primary),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

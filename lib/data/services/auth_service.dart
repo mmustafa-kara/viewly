@@ -162,6 +162,8 @@ class AuthService {
   /// Handle Firebase Auth exceptions
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
+      case 'invalid-credential':
+        return 'E-posta adresi veya şifre hatalı.';
       case 'user-not-found':
         return 'Kullanıcı bulunamadı.';
       case 'wrong-password':

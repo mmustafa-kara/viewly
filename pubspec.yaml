@@ -61,6 +61,7 @@ dependencies:
   # Formatting
   intl: ^0.20.1
   rxdart: ^0.28.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -116,3 +117,5 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/logo.png"
+  adaptive_icon_background: "#1A1625"
+  adaptive_icon_foreground: "assets/logo.png"
