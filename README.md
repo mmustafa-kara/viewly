@@ -26,7 +26,7 @@
   <img src="assets/filmlerDetay.jpeg" width="22%">
   <img src="assets/dizilerDetay.jpeg" width="22%">
   <img src="assets/tartısmaAna.jpeg" width="22%">
-  <img src="profilSayfasi" width="22%">
+  <img src="profilSayfasi.jpeg" width="22%">
   <img src="https://via.placeholder.com/250x500.png?text=Kullanici+Profili" width="22%">
 </p>
 
