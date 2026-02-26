@@ -23,9 +23,9 @@
 
 <p align="center">
   <img src="assets/anaSayfa.jpeg" width="22%">
-  <img src="assets/filmdetay.jpeg" width="22%">
-  <img src="assets/diziDetay.jpeg" width="22%">
-  <img src="assets/tartisma.jpeg" width="22%">
+  <img src="assets/filmlerDetay.jpeg" width="22%">
+  <img src="assets/dizilerDetay.jpeg" width="22%">
+  <img src="assets/tartismaSayfa.jpeg" width="22%">
   <img src="https://via.placeholder.com/250x500.png?text=Kullanici+Profili" width="22%">
   <img src="https://via.placeholder.com/250x500.png?text=Kullanici+Profili" width="22%">
 </p>
