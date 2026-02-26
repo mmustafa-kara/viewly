@@ -28,27 +28,13 @@ class MovieDetailScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withAlpha(128),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.arrow_back, color: Colors.white),
               ),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
-                    color: Colors.black.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.share_outlined, color: Colors.white),
-                ),
-                onPressed: () {},
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -80,7 +66,7 @@ class MovieDetailScreen extends ConsumerWidget {
                         colors: [
                           Colors.transparent,
                           // ignore: deprecated_member_use
-                          AppTheme.background.withOpacity(0.7),
+                          AppTheme.background.withAlpha(178),
                           AppTheme.background,
                         ],
                         stops: const [0.0, 0.7, 1.0],
@@ -126,7 +112,7 @@ class MovieDetailScreen extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           // ignore: deprecated_member_use
-                          color: AppTheme.primary.withOpacity(0.2),
+                          color: AppTheme.primary.withAlpha(51),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(

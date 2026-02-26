@@ -30,7 +30,7 @@ class MainWrapper extends ConsumerWidget {
           boxShadow: [
             BoxShadow(
               // ignore: deprecated_member_use
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withAlpha(51),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
