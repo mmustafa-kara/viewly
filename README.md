@@ -19,8 +19,6 @@
 
 ## 📸 Ekran Görüntüleri
 
-> **Not:** Uygulamanın GitHub'daki görünümünü zenginleştirmek için aşağıdaki placeholder (yer tutucu) resim linklerini kendi aldığın ekran görüntüsü linkleriyle değiştir. (Resimleri GitHub'da bir issue'ya sürükleyip bırakarak linklerini alabilirsin).
-
 <p align="center">
   <img src="assets/anaSayfa.jpeg" width="15%">
   <img src="assets/filmlerDetay.jpeg" width="15%">
